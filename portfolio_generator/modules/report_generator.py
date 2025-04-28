@@ -669,11 +669,20 @@ Format in markdown starting with:
             search_queries.extend(category_queries[cat_name])
             
         # Generate the news update section
-        news_section = await generate_news_update_section(
-            categories=categories,
-            search_queries=search_queries,
-            model_name="gpt-4-turbo",
-            search_results=None  # Not performing web searches here
+        from portfolio_generator.modules.news_update_generator import generate_news_update_section
+        
+        # Convert to the format expected by the news update generator
+        if formatted_search_results and isinstance(formatted_search_results, dict):
+            search_results_list = [{'query': k, 'results': [{'content': v}]} for k, v in formatted_search_results.items()]
+        else:
+            search_results_list = []
+        
+        news_section = await asyncio.to_thread(
+            generate_news_update_section,
+            client=client,
+            search_results=search_results_list,
+            investment_principles=investment_principles,
+            categories=categories
         )
         
         # Append news section to report
@@ -735,11 +744,11 @@ Format in markdown starting with:
             if not dry_run:
                 log_info("Uploading report to Firestore...")
                 try:
+                    # Call upload_report_to_firestore with correct parameters
+                    # Function expects (report_content, portfolio_json, doc_id=None)
                     firestore_report_doc_id = await upload_report_to_firestore(
-                        title="Investment Report",
-                        report_text=report_content,
-                        portfolio_json=portfolio_json,
-                        report_sections=report_sections
+                        report_content,
+                        portfolio_json
                     )
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
                     

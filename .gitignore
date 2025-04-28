@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+fresh_venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Logs and temp files
+*.log
+*.csv
+*.dat
+*~
+
+# Environment variables and credentials
+.env
+.github_token
+*.json
+*.pem
+*.key
+
+# Sensitive files
+*credentials*
+*token*
+*api_key*
+*secret*
+*password*
+
+# Specific sensitive files
+.github_token
+hedgefundintelligence-1efd159a68ef.json
+firebase_credentials.json
+
+# Editor config
+.idea/
+.vscode/
+*.sublime-*
+
+# Operating system
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+output/
+investment_report.md
+portfolio_weights.json

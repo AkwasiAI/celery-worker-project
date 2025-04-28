@@ -41,10 +41,10 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False):
     # Get API key from environment unless in test mode
     if test_mode:
         log_info("Running in test mode - using mock OpenAI client")
-        # Create a simple mock client for test mode
+        # Create a more comprehensive mock client for test mode
         class MockOpenAI:
             def __init__(self):
-                pass
+                self.responses = self  # For compatibility with the OpenAI client structure
                 
             async def chat_completions_create(self, **kwargs):
                 class MockResponse:
@@ -55,6 +55,25 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False):
                             })
                         })]
                 return MockResponse()
+            
+            def create(self, **kwargs):
+                # Enhanced mock response for news update and other sections
+                if "News Update" in kwargs.get("input", ""):
+                    return type('obj', (object,), {
+                        'output': [None, type('obj', (object,), {
+                            'content': [type('obj', (object,), {
+                                'text': "Title: Test Market News\nSummary: This is a test summary of market news. Markets moved on various factors.\nCommentary: The news aligns with our investment principles by focusing on long-term value.\nCitations: None"
+                            })]
+                        })]
+                    })
+                else:
+                    return type('obj', (object,), {
+                        'output': [None, type('obj', (object,), {
+                            'content': [type('obj', (object,), {
+                                'text': "This is a test response from the mock OpenAI client"
+                            })]
+                        })]
+                    })
         
         client = MockOpenAI()
     else:
@@ -637,13 +656,11 @@ Format in markdown starting with:
     log_info("Extracting portfolio data from generated report sections...")
     # --- News Update Section (LLM-powered) ---
     from portfolio_generator.news_update_generator import generate_news_update_section
-    categories = [
-        ("Shipping", 0, 5),
-        ("Commodities", 5, 10),
-        ("Central Bank Policies", 10, 15),
-        ("Macroeconomic News", 15, 20),
-        ("Global Trade & Tariffs", 20, 25)
-    ]
+    # Use category_order to create a simpler categories structure with one entry per category
+    categories = []
+    for index, category in enumerate(category_order):
+        # Each category now just points to a single entry in the search results
+        categories.append((category, index, index + 1))
     try:
         with open(os.path.join(os.path.dirname(__file__), "orasis_investment_principles.txt"), "r") as f:
             investment_principles = f.read().strip()
@@ -667,22 +684,56 @@ Format in markdown starting with:
         search_queries = []
         for cat_name in category_order:
             search_queries.extend(category_queries[cat_name])
-            
+        
         # Generate the news update section
         from portfolio_generator.modules.news_update_generator import generate_news_update_section
         
-        # Convert to the format expected by the news update generator
+        # Prepare search results in the correct format for the news update generator
+        search_results_list = []
         if formatted_search_results and isinstance(formatted_search_results, dict):
-            search_results_list = [{'query': k, 'results': [{'content': v}]} for k, v in formatted_search_results.items()]
-        else:
-            search_results_list = []
+            # Create one search result per category using the main category query
+            for cat_name in category_order:
+                # Get the first query for this category
+                if cat_name in category_queries and category_queries[cat_name]:
+                    main_query = category_queries[cat_name][0]
+                    # Check if we have search results for this query
+                    if main_query in formatted_search_results:
+                        search_results_list.append({
+                            'query': main_query,
+                            'results': [{'content': formatted_search_results[main_query]}],
+                            'citations': []  # Add empty citations list
+                        })
+                    else:
+                        # Add dummy results if none found
+                        search_results_list.append({
+                            'query': f"Latest {cat_name} trends",
+                            'results': [{'content': f"No search results found for {cat_name}"}],
+                            'citations': []
+                        })
+                else:
+                    # Fallback if category has no queries defined
+                    search_results_list.append({
+                        'query': f"Latest {cat_name} trends",
+                        'results': [{'content': f"No search queries defined for {cat_name}"}],
+                        'citations': []
+                    })
         
+        # Prepare categories in the correct format (tuple of name, start_idx, end_idx)
+        formatted_categories = []
+        start_idx = 0
+        for cat_name in category_order:
+            cat_queries = category_queries[cat_name]
+            end_idx = start_idx + len(cat_queries)
+            formatted_categories.append((cat_name, start_idx, end_idx))
+            start_idx = end_idx
+        
+        # Generate the news section
         news_section = await asyncio.to_thread(
             generate_news_update_section,
             client=client,
             search_results=search_results_list,
             investment_principles=investment_principles,
-            categories=categories
+            categories=formatted_categories
         )
         
         # Append news section to report
@@ -753,7 +804,7 @@ Format in markdown starting with:
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
                     
                     # Generate and upload alternative report for ePubs
-                    await generate_and_upload_alternative_report(report_sections, firestore_report_doc_id, "Investment Report")
+                    await generate_and_upload_alternative_report(report_content, firestore_report_doc_id, client)
                     
                     log_success("Report generation completed successfully!")
                 except Exception as e:

@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.4
+# Standard Dockerfile without BuildKit extensions
 FROM python:3.10-slim
 
 # (Optional) Use default Debian mirrors for better reliability
-# RUN find /etc/apt/ -name '*.list' -exec sed -i 's|http://deb.debian.org|http://ftp.de.debian.org|g' {} +
+RUN find /etc/apt/ -name '*.list' -exec sed -i 's|http://deb.debian.org|http://ftp.de.debian.org|g' {} +
 
 ENV PYTHONPATH=/app
 

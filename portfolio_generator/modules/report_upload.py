@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime
 import asyncio
-
+import google.api_core.exceptions
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 
 # Check if Firestore is available
@@ -103,13 +103,27 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         if not openai_client:
             from openai import OpenAI
             openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-            
-        # Get Firestore client
-        db = firestore.Client()
         
-        # Get the current report details
-        reports_ref = db.collection('reports')
-        current_report = reports_ref.document(current_report_firestore_id).get()
+        # Verify Firestore is actually available before proceeding
+        if not FIRESTORE_AVAILABLE:
+            log_warning("Skipping alternative report generation: Firestore is not available")
+            return None
+            
+        try:    
+            # Get Firestore client
+            db = firestore.Client(database='hedgefundintelligence')
+            
+            # Get the current report details
+            portfolios_ref = db.collection('portfolios')
+            current_report = portfolios_ref.document(current_report_firestore_id).get()
+        except google.api_core.exceptions.NotFound as e:
+            # Handle specifically the database not found error
+            log_warning(f"Skipping alternative report generation: Firestore database not found - {e}")
+            return None
+        except Exception as e:
+            # Handle other Firestore client errors
+            log_warning(f"Skipping alternative report generation: Firestore error - {e}")
+            return None
         
         if not current_report.exists:
             log_warning(f"Current report {current_report_firestore_id} not found in Firestore")

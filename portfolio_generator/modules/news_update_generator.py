@@ -19,6 +19,21 @@ def generate_news_update_section(client, search_results, investment_principles, 
     for cat_name, start, end in categories:
         cat_md = [f"### {cat_name}\n"]
         news_number = 1
+        
+        # Check if we have any search results for this category
+        has_results = False
+        for i in range(start, end):
+            if i < len(search_results):
+                has_results = True
+                break
+        
+        # If no results for this category, generate a placeholder entry
+        if not has_results and cat_name:
+            placeholder_news = f"{news_number}. Latest {cat_name} Trends\nSummary: Current market data and trends in {cat_name}.\nCommentary: Monitoring developments in {cat_name} remains essential for our investment strategy."
+            cat_md.append(placeholder_news)
+            news_number += 1
+        
+        # Process actual search results if available
         for i in range(start, end):
             if i < len(search_results):
                 result = search_results[i]
@@ -27,7 +42,7 @@ def generate_news_update_section(client, search_results, investment_principles, 
                 if result.get("results") and len(result["results"]) > 0:
                     content = result["results"][0].get("content", "No content available")
                 else:
-                    content = "No content available"
+                    content = "No content available for query: " + query
 
                 # Use citations field directly
                 citations_list = result.get("citations", [])
@@ -66,16 +81,14 @@ Where possible, reference and include relevant citations as markdown links from 
 </Investment Principles>
 
 <Task>
-- First, generate a concise, informative title for this news item (no more than 12 words).
+- First, generate a concise, informative title for this news item (no more than 7 words).
 - Next, summarize the news in no more than {max_words} words.
 - Then, provide a brief commentary (2-3 sentences) on how this news relates to the investment principles.
-- Where possible, reference and include relevant citations as markdown links from the provided citations list.
+- Do not include citations or sources in the output.
 
 Format (follow exactly):
 Title: <Your generated title>
-Summary: <Your summary>
 Commentary: <Your commentary>
-Citations: <comma-separated markdown links to sources, if available>
 """
                 try:
                     response = client.responses.create(
@@ -88,26 +101,16 @@ Citations: <comma-separated markdown links to sources, if available>
                 except Exception as e:
                     text = f"Title: [Error generating title]\nSummary: [Error generating summary]\nCommentary: [Error generating commentary]\nCitations: [Error generating citations]"
                 
-                title, summary, commentary, citations_llm = "Untitled", "", "", ""
+                title, commentary = "", ""
                 title_match = re.search(r"Title:\s*(.*)", text, re.IGNORECASE)
-                summary_match = re.search(r"Summary:\s*(.*)", text, re.IGNORECASE)
                 commentary_match = re.search(r"Commentary:\s*(.*)", text, re.IGNORECASE)
-                citations_match = re.search(r"Citations:\s*(.*)", text, re.IGNORECASE)
 
                 if title_match:
                     title = title_match.group(1).strip()
-                if summary_match:
-                    summary = summary_match.group(1).strip()
                 if commentary_match:
                     commentary = commentary_match.group(1).strip()
-                if citations_match:
-                    citations_llm = citations_match.group(1).strip()
 
-                news_item = f"{news_number}. {title}\nSummary: {summary}\nCommentary: {commentary}"
-                if citations_llm and citations_llm.lower() != "none":
-                    news_item += f"\nCitations: {citations_llm}"
-                elif citations_md_str:
-                    news_item += f"\nCitations: {citations_md_str}"
+                news_item = f"{news_number}. {title}\nCommentary: {commentary}"
                 cat_md.append(news_item)
                 news_number += 1
         section_md.extend(cat_md)

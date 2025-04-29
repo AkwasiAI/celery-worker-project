@@ -1,6 +1,6 @@
 """Section generator for portfolio reports."""
 import asyncio
-from portfolio_generator.modules.logging import log_info
+from portfolio_generator.modules.logging import log_info, log_warning, log_error
 
 async def generate_section(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000):
     """Generate a section of the investment portfolio report.
@@ -88,12 +88,16 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
 """
         
         # Add previous sections' summaries for context if available
-        if previous_sections:
+        # Ensure previous_sections is a dictionary to avoid 'int' object has no attribute 'items' error
+        if previous_sections and isinstance(previous_sections, dict):
             sections_context = "\n\n## Previous sections of the report include:\n\n"
             for sec_name, sec_content in previous_sections.items():
                 # Include the full content of each previous section
                 sections_context += f"### {sec_name}\n{sec_content}\n\n"
             full_prompt += sections_context
+        elif previous_sections and not isinstance(previous_sections, dict):
+            # Log warning if previous_sections is provided but not a dictionary
+            log_warning(f"previous_sections parameter for {section_name} is not a dictionary: {type(previous_sections)}")
         
         # Explicitly mention word count in the final request
         if target_word_count:

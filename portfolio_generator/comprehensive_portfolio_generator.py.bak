@@ -1187,8 +1187,8 @@ async def generate_investment_portfolio():
                 
                 # With the new API approach, check if the results list contains content
                 if result.get("results") and len(result["results"]) > 0 and "content" in result["results"][0]:
-                    content_preview = result["results"][0]["url"][:100]
-                    log_success(f"Search {i+1} successful: '{result['query']}' → {content_preview}...")
+                    content_preview = result["results"][0]["url"][:500]
+                    log_success(f"Search {i+1} successful: '{content_preview}...")
                 elif "error" in result:
                     log_error(f"Search {i+1} failed: {result.get('error', 'Unknown error')}")
                 else:

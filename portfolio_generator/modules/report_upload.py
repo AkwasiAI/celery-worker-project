@@ -131,11 +131,21 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             return None
             
         # Query for the previous report (the latest report before the current one)
-        query = reports_ref.where('doc_type', '==', 'report').where('is_latest', '==', True)
-        query = query.where('docId', '!=', current_report_firestore_id).order_by('docId', direction='DESCENDING').limit(1)
+        # Modified query to avoid requiring composite index
+        query = portfolios_ref.where('doc_type', '==', 'report').where('is_latest', '==', True)
         
-        # Get the previous report
-        previous_reports = list(query.stream())
+        # Get all the latest reports and filter in application code to avoid index requirement
+        latest_reports = list(query.stream())
+        previous_reports = [doc for doc in latest_reports if doc.id != current_report_firestore_id]
+        
+        # Sort the results manually by docId
+        previous_reports.sort(key=lambda doc: doc.id, reverse=True)
+        
+        # Limit to 1 result
+        if len(previous_reports) > 1:
+            previous_reports = previous_reports[:1]
+        
+        # At this point, previous_reports contains the filtered and sorted results
         if not previous_reports:
             log_warning("No previous report found to generate alternative report")
             return None

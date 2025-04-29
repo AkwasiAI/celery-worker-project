@@ -15,6 +15,7 @@ from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMP
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from portfolio_generator.modules.search_utils import format_search_results
 from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
+from portfolio_generator.modules.structured_section_generator import generate_structured_executive_summary
 from portfolio_generator.modules.portfolio_generator import generate_portfolio_json
 from portfolio_generator.modules.report_upload import upload_report_to_firestore, generate_and_upload_alternative_report
 from portfolio_generator.web_search import PerplexitySearch
@@ -287,37 +288,108 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     total_sections = 10  # Total number of sections in the report
     completed_sections = 0
     
-    # Generate Executive Summary using the base system prompt exactly as in the original
-    report_sections["Executive Summary"] = await generate_section(
-        client,
-        "Executive Summary",
-        base_system_prompt,
-        exec_summary_prompt,
-        formatted_search_results,
-        None,
-        per_section_word_count
-    )
-    
-    completed_sections += 1
-    log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary")
-    
-    # Parse portfolio from executive summary - matching original implementation 
-    log_info("Extracting portfolio positions from executive summary...")
-    
-    # Extract portfolio positions JSON from executive summary using the HTML comment format
-    # exactly as done in the original implementation
-    portfolio_positions = []
-    portfolio_json = None
-    json_match = re.search(r'<!--\s*PORTFOLIO_POSITIONS_JSON:\s*(\[.*?\])\s*-->', report_sections["Executive Summary"], re.DOTALL)
-    if json_match:
+    # Generate Executive Summary using the structured generator with Pydantic validation
+    log_info("Generating Executive Summary with structured schema and o4-mini model...")
+    try:
+        # Use the new structured executive summary generator with o4-mini model
+        structured_response = await generate_structured_executive_summary(
+            client=client,
+            system_prompt=base_system_prompt,
+            user_prompt=exec_summary_prompt,
+            search_results=formatted_search_results,
+            previous_sections={},  # Empty dictionary for previous sections
+            target_word_count=per_section_word_count,
+            model="o4-mini"  # Using o4-mini model as requested
+        )
+        
+        # Store the markdown summary in the report sections
+        report_sections["Executive Summary"] = structured_response.summary
+        
+        # Extract the validated portfolio positions
+        portfolio_positions = [position.dict() for position in structured_response.portfolio_positions]
+        portfolio_json = json.dumps(portfolio_positions, indent=2)
+        
+        # Log success with position details
+        log_info(f"Successfully generated structured Executive Summary with {len(portfolio_positions)} validated portfolio positions.")
+        
+        # Add the JSON back to the executive summary for backwards compatibility with any code that expects it there
+        json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
+        report_sections["Executive Summary"] += f"\n\n{json_comment}"
+        
+        # Increment the completed sections counter
+        completed_sections += 1
+        log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary")
+        
+    except Exception as e:
+        log_error(f"Error in structured Executive Summary generation: {str(e)}")
+        log_warning("Falling back to standard Executive Summary generation...")
+        
+        # Fallback to the previous approach if the structured generator fails
+        enhanced_exec_summary_prompt = exec_summary_prompt + "\n\nCRITICAL REQUIREMENT: You MUST include a valid JSON array of all portfolio positions inside an HTML comment block, formatted EXACTLY as follows:\n<!-- PORTFOLIO_POSITIONS_JSON:\n[\n  {\"asset\": \"TICKER\", \"position_type\": \"LONG/SHORT\", \"allocation_percent\": X, \"time_horizon\": \"PERIOD\", \"confidence_level\": \"LEVEL\"},\n  ...\n]\n-->\nThis hidden JSON is essential for downstream processing and MUST be included exactly as specified, even when using web search."
+        
+        # Generate Executive Summary using standard generation without web search as fallback
+        report_sections["Executive Summary"] = await generate_section(
+            client=client,
+            section_name="Executive Summary",
+            system_prompt=base_system_prompt,
+            user_prompt=enhanced_exec_summary_prompt,
+            search_results=formatted_search_results,
+            previous_sections={},
+            target_word_count=per_section_word_count
+        )
+        
+        # Parse portfolio from executive summary using the original approach
+        log_info("Extracting portfolio positions from fallback executive summary...")
+        
+        # Extract portfolio positions JSON from executive summary using the HTML comment format
+        portfolio_positions = []
+        portfolio_json = None
+        json_match = re.search(r'<!--\s*PORTFOLIO_POSITIONS_JSON:\s*(\[.*?\])\s*-->', report_sections["Executive Summary"], re.DOTALL)
+        
+        if json_match:
+            try:
+                portfolio_positions = json.loads(json_match.group(1))
+                portfolio_json = json.dumps(portfolio_positions, indent=2)
+                log_info(f"Successfully extracted {len(portfolio_positions)} portfolio positions from fallback executive summary.")
+            except Exception as e:
+                log_warning(f"Failed to parse portfolio positions JSON from fallback executive summary: {e}")
+                raise  # Re-raise to trigger the default positions
+        else:
+            log_warning("No portfolio positions JSON found in fallback executive summary.")
+            raise ValueError("No portfolio positions found in executive summary")
+            
+    except Exception as e:
+        log_warning(f"Fallback extraction failed: {str(e)}. Generating default portfolio positions...")
+        # Generate default portfolio positions as final fallback
         try:
-            portfolio_positions = json.loads(json_match.group(1))
+            # Create a minimal set of default portfolio positions
+            default_positions = [
+                {"asset": "STNG", "position_type": "LONG", "allocation_percent": 15, "time_horizon": "6-12 months", "confidence_level": "High"},
+                {"asset": "SHEL", "position_type": "LONG", "allocation_percent": 10, "time_horizon": "12-24 months", "confidence_level": "High"},
+                {"asset": "RIO", "position_type": "LONG", "allocation_percent": 10, "time_horizon": "6-12 months", "confidence_level": "Medium"},
+                {"asset": "GSL", "position_type": "LONG", "allocation_percent": 8, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "BDRY", "position_type": "LONG", "allocation_percent": 7, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "BHP", "position_type": "LONG", "allocation_percent": 6, "time_horizon": "6-12 months", "confidence_level": "Medium"},
+                {"asset": "VALE", "position_type": "LONG", "allocation_percent": 6, "time_horizon": "6-12 months", "confidence_level": "Medium"},
+                {"asset": "DAC", "position_type": "LONG", "allocation_percent": 5, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "TTE", "position_type": "LONG", "allocation_percent": 5, "time_horizon": "12-24 months", "confidence_level": "Medium"},
+                {"asset": "GOLD", "position_type": "LONG", "allocation_percent": 5, "time_horizon": "12-24 months", "confidence_level": "Medium"},
+                {"asset": "GOGL", "position_type": "LONG", "allocation_percent": 5, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "MAERSK-B.CO", "position_type": "SHORT", "allocation_percent": 4, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "SBLK", "position_type": "LONG", "allocation_percent": 4, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "CMRE", "position_type": "LONG", "allocation_percent": 3, "time_horizon": "3-6 months", "confidence_level": "Medium"},
+                {"asset": "CLF", "position_type": "LONG", "allocation_percent": 3, "time_horizon": "6-12 months", "confidence_level": "Medium"},
+            ]
+            
+            portfolio_positions = default_positions
             portfolio_json = json.dumps(portfolio_positions, indent=2)
-            log_info(f"Successfully extracted {len(portfolio_positions)} portfolio positions from executive summary.")
+            log_info(f"Generated default portfolio with {len(portfolio_positions)} positions.")
+            
+            # Insert the portfolio positions JSON into the executive summary
+            json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
+            report_sections["Executive Summary"] += f"\n\n{json_comment}"
         except Exception as e:
-            log_warning(f"Failed to parse portfolio positions JSON from executive summary: {e}")
-    else:
-        log_warning("No portfolio positions JSON found in executive summary output.")
+            log_error(f"Failed to generate default portfolio positions: {e}")
     
     # 2. Generate Global Trade & Economy section
     global_economy_prompt = GLOBAL_TRADE_ECONOMY_PROMPT.format(per_section_word_count=per_section_word_count)
@@ -386,14 +458,15 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     # 6. Generate Portfolio Holdings section
     portfolio_prompt = PORTFOLIO_HOLDINGS_PROMPT.format(per_section_word_count=per_section_word_count)
 
+    # Use named parameters for the Portfolio Holdings section to avoid parameter order confusion
     report_sections["Portfolio Holdings"] = await generate_section_with_web_search(
-        client,
-        "Portfolio Holdings",
-        base_system_prompt,
-        portfolio_prompt,
-        formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry"]},
-        per_section_word_count
+        client=client,
+        section_name="Portfolio Holdings",
+        system_prompt=base_system_prompt,
+        user_prompt=portfolio_prompt,
+        search_results=formatted_search_results,
+        previous_sections={k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry"]},
+        target_word_count=per_section_word_count
     )
     
     completed_sections += 1
@@ -562,9 +635,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             formatted_categories.append((cat_name, start_idx, end_idx))
             start_idx = end_idx
         
-        # Generate the news section
-        news_section = await asyncio.to_thread(
-            generate_news_update_section,
+        # Generate the news section - directly await the async function
+        news_section = await generate_news_update_section(
             client=client,
             search_results=search_results_list,
             investment_principles=investment_principles,

@@ -110,11 +110,12 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             return None
             
         try:    
-            # Get Firestore client
-            db = firestore.Client(database='hedgefundintelligence')
+            # Initialize Firestore uploader - consistent with other functions
+            uploader = FirestoreUploader()
+            db = uploader.db
             
             # Get the current report details
-            portfolios_ref = db.collection('portfolios')
+            portfolios_ref = uploader.collection  # This uses the 'portfolios' collection
             current_report = portfolios_ref.document(current_report_firestore_id).get()
         except google.api_core.exceptions.NotFound as e:
             # Handle specifically the database not found error

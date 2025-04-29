@@ -7,19 +7,25 @@ import re
 from datetime import datetime
 from openai import OpenAI
 
+from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMPT,
+    SHIPPING_INDUSTRY_PROMPT, CONCLUSION_OUTLOOK_PROMPT, REFERENCES_SOURCES_PROMPT, 
+    RISK_ASSESSMENT_PROMPT, GLOBAL_TRADE_ECONOMY_PROMPT, PORTFOLIO_HOLDINGS_PROMPT,
+    ENERGY_MARKETS_PROMPT, COMMODITIES_MARKETS_PROMPT, BENCHMARKING_PERFORMANCE_PROMPT,
+    BASE_SYSTEM_PROMPT)
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from portfolio_generator.modules.search_utils import format_search_results
-from portfolio_generator.modules.section_generator import generate_section
+from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
 from portfolio_generator.modules.portfolio_generator import generate_portfolio_json
 from portfolio_generator.modules.report_upload import upload_report_to_firestore, generate_and_upload_alternative_report
 from portfolio_generator.web_search import PerplexitySearch
 
-async def generate_investment_portfolio(test_mode=False, dry_run=False):
+async def generate_investment_portfolio(test_mode=False, dry_run=False, priority_period="month"):
     """Generate a comprehensive investment portfolio report through multiple API calls.
     
     Args:
         test_mode (bool): If True, run in test mode with minimal API calls
         dry_run (bool): If True, don't upload to Firestore
+        priority_period (str): Time period to prioritize for news (e.g., "week", "month", "quarter")
         
     Returns:
         dict: Report sections and metadata
@@ -259,74 +265,23 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False):
     # Define the current date
     current_date = datetime.now().strftime("%Y-%m-%d")
     
-    # Define base system prompt exactly as in the original implementation
-    base_system_prompt = f"""You are a professional investment analyst at Orasis Capital, a hedge fund specializing in global macro and trade-related assets.
-Your task is to create detailed investment portfolio analysis with data-backed research and specific source citations.
-
-IMPORTANT CLIENT CONTEXT - GEORGE (HEDGE FUND OWNER):
-George, the owner of Orasis Capital, has specified the following investment preferences:
-
-1. Risk Tolerance: Both high-risk opportunities and balanced investments with a mix of defensive and growth-oriented positions.
-
-2. Time Horizon Distribution:
-   - 30% of portfolio: 1 month to 1 quarter (short-term)
-   - 30% of portfolio: 1 quarter to 6 months (medium-term)
-   - 30% of portfolio: 6 months to 1 year (medium-long term)
-   - 10% of portfolio: 2 to 3 year trades (long-term)
-
-3. Investment Strategy: Incorporate both leverage and hedging strategies, not purely cash-based. Include both long and short positions as appropriate based on market analysis. George wants genuine short recommendations based on fundamental weaknesses, not just hedges.
-
-4. Regional Focus: US, Europe, and Asia, with specific attention to global trade shifts affecting China, Asia, Middle East, and Africa. The portfolio should have positions across all major regions.
-
-5. Commodity Interests: Wide range including crude oil futures, natural gas, metals, agricultural commodities, and related companies.
-
-6. Shipping Focus: Strong emphasis on various shipping segments including tanker, dry bulk, container, LNG, LPG, and offshore sectors.
-
-7. Credit Exposure: Include G7 10-year government bonds, high-yield shipping bonds, and corporate bonds of commodities companies.
-
-8. ETF & Indices: Include major global indices (Dow Jones, S&P 500, NASDAQ, European indices, Asian indices) and other tradeable ETFs.
-
-INVESTMENT THESIS:
-Orasis Capital's core strategy is to capitalize on global trade opportunities, with a 20-year track record in shipping-related investments. The fund identifies shifts in global trade relationships that impact countries and industries, analyzing whether these impacts are manageable. Key focuses include monitoring changes in trade policies from new governments, geopolitical developments, and structural shifts in global trade patterns.
-
-The firm believes trade flows are changing, with China, Asia, the Middle East, and Africa gaining more investment and trade volume compared to traditional areas like the US and Europe. Their research approach uses shipping (90% of global trade volume) as a leading indicator for macro investments, allowing them to identify shifts before they become widely apparent.
-
-IMPORTANT CONSTRAINTS:
-1. The ENTIRE report must be NO MORE than {total_word_count} words total. Optimize your content accordingly.
-2. You MUST include a comprehensive summary table in the Executive Summary section.
-3. Ensure all assertions are backed by specific data points or sources.
-4. Use current data from 2024-2025 where available.
-5. EXTREMELY IMPORTANT: Approximately 20% of the portfolio positions MUST be short positions based on fundamental analysis of overvalued, vulnerable, or declining assets."""
+    # Define base system prompt using the imported prompt
+    current_year = datetime.now().year
+    next_year = current_year + 1
+    # Use the passed in priority_period parameter
+    base_system_prompt = BASE_SYSTEM_PROMPT.format(
+        total_word_count=total_word_count,
+        current_year=current_year,
+        next_year=next_year,
+        priority_period=priority_period
+    )
     
-    # 1. Generate Executive Summary - match original user prompt exactly
+    # 1. Generate Executive Summary - using the imported prompt
     log_info("Generating executive summary section...")
-    exec_summary_prompt = f"""Generate an executive summary for the investment portfolio report.
-
-Include current date ({current_date}) and the title format specified previously.
-Summarize the key findings, market outlook, and high-level portfolio strategy.
-Keep it clear, concise, and data-driven with specific metrics.
-
-CRITICAL REQUIREMENT: You MUST include a comprehensive summary table displaying ALL portfolio positions (strictly limited to 20-25 total positions).
-This table MUST be properly formatted in markdown and include columns for:
-- Asset/Ticker (must be a real, verifiable ticker listed on a major stock exchange such as NYSE or Oslo Stock Exchange; do NOT invent or use fake/unlisted tickers)
-- Position Type (Long/Short)
-- Allocation % (must sum to 100%)
-- Time Horizon
-- Confidence Level
-
-IMPORTANT: Only use genuine tickers from legitimate exchanges. Do NOT invent or use any fake or unlisted tickers.
-
-Immediately after the markdown table, output a valid JSON array of all portfolio positions INSIDE an HTML comment block (so it is hidden from the report). Use the following structure:
-<!-- PORTFOLIO_POSITIONS_JSON:
-[
-  {{"asset": ..., "position_type": ..., "allocation_percent": ..., "time_horizon": ..., "confidence_level": ...}},
-  ...
-]
--->
-This JSON must NOT be visible in the rendered report; it is only for internal processing.
-Remember that the entire report must not exceed {total_word_count} words total. This summary should be concise but comprehensive.
-
-After the table and JSON, include a brief overview of asset allocations by category (shipping, commodities, energy, etc.)."""
+    exec_summary_prompt = EXECUTIVE_SUMMARY_DETAILED_PROMPT.format(
+        current_date=current_date,
+        total_word_count=total_word_count
+    )
     
     # Initialize section tracking variables
     total_sections = 10  # Total number of sections in the report
@@ -365,20 +320,7 @@ After the table and JSON, include a brief overview of asset allocations by categ
         log_warning("No portfolio positions JSON found in executive summary output.")
     
     # 2. Generate Global Trade & Economy section
-    global_economy_prompt = f"""Write a concise but comprehensive analysis (aim for approximately {per_section_word_count} words) of Global Trade & Economy as part of a macroeconomic outlook section.
-Include:
-- Regional breakdowns and economic indicators with specific figures
-- GDP growth projections by region with exact percentages
-- Trade flow statistics with exact volumes and year-over-year changes
-- Container throughput at major ports with specific TEU figures
-- Supply chain metrics and logistics indicators
-- Currency valuations and impacts on trade relationships
-- Trade agreements and policy changes with implementation timelines
-- Inflation rates across major economies with comparisons
-
-Format in markdown starting with:
-## Global Trade & Economy
-"""
+    global_economy_prompt = GLOBAL_TRADE_ECONOMY_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Global Trade & Economy"] = await generate_section(
         client,
@@ -394,19 +336,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Global Trade & Economy")
     
     # 3. Generate Energy Markets section
-    energy_markets_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of Energy Markets as part of an investment portfolio report.
-Include:
-- Oil markets: production, demand, and price forecasts with specific data points
-- Natural gas markets: regional analysis and price dynamics
-- Renewable energy growth and investment opportunities with specific companies
-- Energy transition trends and policy impacts
-- Geopolitical factors affecting energy markets
-- Supply constraints and infrastructure developments
-- Commodity trader positioning in energy markets
-
-Format in markdown starting with:
-## Energy Markets
-"""
+    energy_markets_prompt = ENERGY_MARKETS_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Energy Markets"] = await generate_section(
         client,
@@ -422,19 +352,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Energy Markets")
     
     # 4. Generate Commodities section
-    commodities_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of Commodities Markets as part of an investment portfolio report.
-Include:
-- Precious metals market analysis (gold, silver, platinum) with specific price targets
-- Industrial metals outlook (copper, aluminum, nickel) with supply/demand figures
-- Agricultural commodities trends and price forecasts
-- Soft commodities market dynamics
-- Commodity-specific factors driving price movements
-- Seasonal patterns and historical context
-- Warehousing and inventory levels with specific data points
-
-Format in markdown starting with:
-## Commodities Markets
-"""
+    commodities_prompt = COMMODITIES_MARKETS_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Commodities Markets"] = await generate_section(
         client,
@@ -450,20 +368,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Commodities Markets")
     
     # 5. Generate Shipping section
-    shipping_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of the Shipping Industry as part of an investment portfolio report.
-Include:
-- Container shipping market dynamics with specific freight rates
-- Dry bulk shipping trends and key routes with rate data
-- Tanker market analysis and oil shipping routes
-- Major shipping companies performance and outlook with specific companies
-- Port congestion and logistics bottlenecks with wait time statistics
-- Fleet capacity and orderbook analysis with specific tonnage figures
-- Shipping regulation changes and environmental initiatives
-- Charter rate trends and forecasts with specific rate ranges
-
-Format in markdown starting with:
-## Shipping Industry
-"""
+    shipping_prompt = SHIPPING_INDUSTRY_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Shipping Industry"] = await generate_section(
         client,
@@ -479,22 +384,9 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Shipping Industry")
     
     # 6. Generate Portfolio Holdings section
-    portfolio_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of the current Portfolio Holdings as part of an investment portfolio report.
-Include:
-- Individual analysis of key positions with specific entry rationales
-- Sector allocation strategy and rationale
-- Geographic exposure analysis
-- Position sizing methodology
-- Risk management approach for current holdings
-- Expected holding periods and exit strategies for major positions
-- Recent portfolio changes and the rationale behind them
-- Correlation analysis between holdings
+    portfolio_prompt = PORTFOLIO_HOLDINGS_PROMPT.format(per_section_word_count=per_section_word_count)
 
-Format in markdown starting with:
-## Portfolio Holdings
-"""
-
-    report_sections["Portfolio Holdings"] = await generate_section(
+    report_sections["Portfolio Holdings"] = await generate_section_with_web_search(
         client,
         "Portfolio Holdings",
         base_system_prompt,
@@ -508,20 +400,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Portfolio Holdings")
     
     # 7. Generate Benchmarking & Performance section
-    benchmarking_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of Portfolio Benchmarking & Performance as part of an investment portfolio report.
-Include:
-- Performance comparison to relevant benchmarks with specific percentage figures
-- Attribution analysis by sector and asset class
-- Risk-adjusted return metrics (Sharpe, Sortino, etc.) with specific values
-- Volatility analysis compared to markets
-- Drawdown analysis and recovery periods
-- Factor exposure analysis (value, momentum, quality, etc.)
-- Historical performance in similar market environments
-- Performance of specific investment themes within the portfolio
-
-Format in markdown starting with:
-## Benchmarking & Performance
-"""
+    benchmarking_prompt = BENCHMARKING_PERFORMANCE_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Benchmarking & Performance"] = await generate_section(
         client,
@@ -537,20 +416,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Benchmarking & Performance")
     
     # 8. Generate Risk Assessment section
-    risk_prompt = f"""Write a detailed analysis (aim for approximately {per_section_word_count} words) of Risk Assessment as part of an investment portfolio report.
-Include:
-- Key risk factors facing the portfolio with probability estimates
-- Stress test scenarios and potential portfolio impacts with specific percentage figures
-- Correlation matrices during stress periods
-- Liquidity risk analysis for each asset class
-- Scenario analysis for different market environments
-- Geopolitical risk factors and potential market impacts
-- Regulatory risks affecting portfolio holdings
-- Tail risk hedging strategies employed in the portfolio
-
-Format in markdown starting with:
-## Risk Assessment
-"""
+    risk_prompt = RISK_ASSESSMENT_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Risk Assessment"] = await generate_section(
         client,
@@ -566,20 +432,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Risk Assessment")
     
     # 9. Generate Conclusion & Outlook section
-    conclusion_prompt = f"""Write a concise conclusion and outlook (aim for approximately {per_section_word_count} words) for an investment portfolio report.
-Include:
-- Summary of key portfolio positioning and investment thesis
-- Forward-looking market expectations with timeframes
-- Upcoming catalysts to monitor with specific dates where possible
-- Potential portfolio adjustments to consider
-- Long-term strategic themes guiding investment decisions
-- Tactical opportunities on the horizon
-- Key risks to the investment outlook
-- Final investment recommendations and action items
-
-Format in markdown starting with:
-## Conclusion & Outlook
-"""
+    conclusion_prompt = CONCLUSION_OUTLOOK_PROMPT.format(per_section_word_count=per_section_word_count)
 
     report_sections["Conclusion & Outlook"] = await generate_section(
         client,
@@ -595,18 +448,7 @@ Format in markdown starting with:
     log_info(f"Completed section {completed_sections}/{total_sections}: Conclusion & Outlook")
     
     # 10. Generate References & Sources section
-    references_prompt = """Create a properly formatted references and sources section for the investment portfolio report. 
-Include:
-- Economic data sources
-- Market research reports referenced
-- Financial news sources
-- Academic papers or journal articles (if referenced)
-- Government and central bank publications
-- Industry reports and white papers
-
-Format in markdown starting with:
-## References & Sources
-"""
+    references_prompt = REFERENCES_SOURCES_PROMPT
 
     report_sections["References & Sources"] = await generate_section(
         client,
@@ -627,24 +469,7 @@ Format in markdown starting with:
 
 """
     
-    # Define the section order
-    section_order = [
-        "Executive Summary",
-        "Global Trade & Economy",
-        "Energy Markets",
-        "Commodities Markets",
-        "Shipping Industry",
-        "Portfolio Holdings",
-        "Benchmarking & Performance",
-        "Risk Assessment",
-        "Conclusion & Outlook",
-        "References & Sources"
-    ]
-    
-    # Add sections in order
-    for section in section_order:
-        if section in report_sections:
-            report_content += report_sections[section] + "\n\n"
+
     
     log_info("Report generation complete!")
     
@@ -656,6 +481,16 @@ Format in markdown starting with:
     log_info("Extracting portfolio data from generated report sections...")
     # --- News Update Section (LLM-powered) ---
     from portfolio_generator.news_update_generator import generate_news_update_section
+    
+    # Define news categories order
+    category_order = [
+        "Shipping",
+        "Commodities", 
+        "Central Bank Policies",
+        "Global Trade",
+        "Energy Markets"
+    ]
+    
     # Use category_order to create a simpler categories structure with one entry per category
     categories = []
     for index, category in enumerate(category_order):
@@ -736,13 +571,33 @@ Format in markdown starting with:
             categories=formatted_categories
         )
         
-        # Append news section to report
+        # Store news section in report_sections dictionary
         if news_section:
-            report_content += "\n\n## Latest Market News\n" + news_section
-            log_info("Added news update section to report")
+            report_sections["Latest Market News"] = "## Latest Market News\n" + news_section
+            log_info("Added news update section to report_sections dictionary")
     except Exception as e:
         log_error(f"Error generating news update section: {e}")
     
+    # Define the section order
+    section_order = [
+        "Executive Summary",
+        "Global Trade & Economy",
+        "Energy Markets",
+        "Commodities Markets",
+        "Shipping Industry",
+        "Portfolio Holdings",
+        "Benchmarking & Performance",
+        "Risk Assessment",
+        "Conclusion & Outlook",
+        "Latest Market News",
+        "References & Sources"
+    ]
+    
+    # Add sections in order
+    for section in section_order:
+        if section in report_sections:
+            report_content += report_sections[section] + "\n\n"
+
     # Generate portfolio JSON
     try:
         # Default empty portfolio for fallback

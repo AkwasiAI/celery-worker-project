@@ -47,10 +47,8 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         # Make the API call with GPT-4
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="gpt-4-turbo",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=4000
+            model="o4-mini",
+            messages=messages
         )
         
         # Extract and return the generated content
@@ -61,4 +59,93 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
     except Exception as e:
         # Handle any errors
         log_info(f"Error generating {section_name}: {str(e)}")
+        return f"Error generating {section_name}: {str(e)}"
+
+async def generate_section_with_web_search(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000):
+    """Generate a section of the investment portfolio report using GPT-4.1 with web search capability.
+    
+    Args:
+        client: OpenAI client
+        section_name: Name of the section to generate
+        system_prompt: The system prompt for the model
+        user_prompt: The user prompt for the model
+        search_results: Optional existing search results (not used if web search is enabled)
+        previous_sections: Optional previous sections to provide context
+        target_word_count: Target word count for the section
+        
+    Returns:
+        str: The generated section content
+    """
+    log_info(f"Generating {section_name} with web search capability...")
+    
+    try:
+        # Combine all inputs into a single comprehensive prompt
+        full_prompt = f"""# {section_name}
+
+{system_prompt}
+
+{user_prompt}
+"""
+        
+        # Add previous sections' summaries for context if available
+        if previous_sections:
+            sections_context = "\n\n## Previous sections of the report include:\n\n"
+            for sec_name, sec_content in previous_sections.items():
+                # Include the full content of each previous section
+                sections_context += f"### {sec_name}\n{sec_content}\n\n"
+            full_prompt += sections_context
+        
+        # Explicitly mention word count in the final request
+        if target_word_count:
+            full_prompt += f"\n\nPlease write approximately {target_word_count} words for this section, maintaining depth and quality."
+        
+        # Set up the tools for web search
+        tools = [
+            {"type": "web_search_preview"}  # This activates the web search tool
+        ]
+        
+        # Make the API call with GPT-4.1 using Responses API with web search
+        log_info(f"Making API call to Responses API with web search for {section_name}")
+        response = await asyncio.to_thread(
+            client.responses.create,
+            model="gpt-4.1",  # Using GPT-4.1 which supports the web search tool
+            input=full_prompt,  # Using the combined prompt as input
+            tools=tools,
+            temperature=0.1
+        )
+        
+        # Extract and return the generated content
+        if response and response.output:
+            # Initialize content variable
+            content = ""
+            
+            # Log if web search was performed
+            for output_item in response.output:
+                if output_item.type == 'web_search_call':
+                    log_info(f"Web search was performed for {section_name}")
+                    break
+            
+            # Find the message output item
+            for output_item in response.output:
+                if output_item.type == 'message' and output_item.content:
+                    # Just get the text from the first output_text content block
+                    for content_block in output_item.content:
+                        if content_block.type == 'output_text':
+                            content = content_block.text
+                            break
+                    break
+            
+            if content:
+                log_info(f"Successfully generated {section_name} with web search capability ({len(content.split())} words)")
+                return content
+            else:
+                log_info(f"No content found in response for {section_name}")
+                return f"Error: No content found in response for {section_name}"
+        else:
+            log_info(f"Empty response received for {section_name}")
+            return f"Error: Empty response received for {section_name}"
+        
+    except Exception as e:
+        # Handle any errors
+        log_info(f"Error generating {section_name} with web search: {str(e)}")
         return f"Error generating {section_name}: {str(e)}"

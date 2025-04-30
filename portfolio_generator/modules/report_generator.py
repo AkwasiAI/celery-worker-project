@@ -293,16 +293,72 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     # Generate Executive Summary using the structured generator with Pydantic validation
     log_info("Generating Executive Summary with structured schema and o4-mini model...")
     try:
-        # Use the new structured executive summary generator with o4-mini model
-        # Temporarily using o4-mini for debugging to see the raw output
+        # Create a more focused system prompt specifically for executive summary generation
+        executive_summary_system_prompt = """You are an expert investment analyst creating a structured portfolio executive summary. 
+Your primary task is to generate a well-formatted investment portfolio with asset positions, allocation percentages, 
+and a forward-looking market analysis. 
+
+YOU MUST FOLLOW THE USER'S INSTRUCTIONS EXACTLY to create a valid portfolio summary. 
+Do not create a news analysis or describe current events - create a forward-looking portfolio.
+
+You MUST include a table of portfolio positions AND hidden JSON in HTML comments."""
+        
+        # Separate and limit the search results to prevent them from dominating the prompt
+        if formatted_search_results and isinstance(formatted_search_results, str):
+            log_info("Processing search results for executive summary...")
+            
+            # Extract only small snippets of market data from the search results
+            extracted_market_insights = """
+*** REFERENCE MARKET INSIGHTS (DO NOT COPY DIRECTLY) ***
+
+Use these high-level market trends ONLY to inform your portfolio construction:
+"""
+            
+            # Split by newlines and extract only short key insights
+            search_lines = formatted_search_results.split('\n')
+            extracted_lines = []
+            
+            # Add just enough market context without overwhelming the prompt
+            energy_added = shipping_added = commodity_added = False
+            for line in search_lines[:20]:  # Limit to first 20 lines
+                if ('energy' in line.lower() or 'oil' in line.lower()) and not energy_added:
+                    extracted_lines.append("- Energy markets: " + line[:60] + "...")
+                    energy_added = True
+                elif ('shipping' in line.lower() or 'tanker' in line.lower()) and not shipping_added:
+                    extracted_lines.append("- Shipping rates: " + line[:60] + "...")
+                    shipping_added = True
+                elif ('commodity' in line.lower() or 'metal' in line.lower()) and not commodity_added:
+                    extracted_lines.append("- Commodities: " + line[:60] + "...")
+                    commodity_added = True
+            
+            if extracted_lines:
+                extracted_market_insights += "\n" + "\n".join(extracted_lines) + "\n\n"
+            else:
+                extracted_market_insights += "\n- Limited market data available. Focus on diversified portfolio construction.\n\n"
+                
+            # Add strong reminder about task priority
+            extracted_market_insights += """CRITICAL: Your primary task is to create a FORWARD-LOOKING INVESTMENT PORTFOLIO with positions in a table and JSON format.
+DO NOT create a news article or summary about global trade & tariffs or any other topic.
+Focus on proper portfolio construction as specified in the instructions."""
+            
+            log_info("Created focused market insights for executive summary guidance")
+        else:
+            extracted_market_insights = """No market data available. Create a diversified portfolio based on 
+forward-looking expectations for energy, shipping, and commodity markets."""
+        
+        # Combine the executive summary prompt with the extracted insights
+        complete_exec_summary_prompt = exec_summary_prompt + "\n\n" + extracted_market_insights
+        
+        # Use the structured executive summary generator with focused prompts
+        log_info("Generating executive summary with strict portfolio focus...")
         structured_response = await generate_structured_executive_summary(
             client=client,
-            system_prompt=base_system_prompt,
-            user_prompt=exec_summary_prompt,
-            search_results=formatted_search_results,
+            system_prompt=executive_summary_system_prompt,  # Use the focused system prompt
+            user_prompt=complete_exec_summary_prompt,
+            search_results=None,  # Don't pass raw search results directly
             previous_sections={},  # Empty dictionary for previous sections
             target_word_count=per_section_word_count,
-            model="o4-mini"  # Temporarily using o4-mini to see the raw output
+            model="o4-mini"
         )
         
         # Store the markdown summary in the report sections
@@ -598,6 +654,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         
         # Generate the news update section
         from portfolio_generator.modules.news_update_generator import generate_news_update_section
+        
+
         
         # Prepare search results in the correct format for the news update generator
         search_results_list = []

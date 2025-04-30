@@ -25,12 +25,19 @@ async def generate_news_update_section(client, search_results, investment_princi
         cat_md = [f"## {cat_name}\n"]
         news_number = 1
         
-        # Check if we have any search results for this category
+        # Check if we have any valid search results for this category
         has_results = False
+        valid_results_count = 0
+        
         for i in range(start, end):
             if i < len(search_results):
-                has_results = True
-                break
+                result = search_results[i]
+                # Check if this result has actual content
+                if result.get("results") and len(result["results"]) > 0 and result["results"][0].get("content"):
+                    has_results = True
+                    valid_results_count += 1
+        
+        log_info(f"Category: {cat_name} - Valid results: {valid_results_count} (Index range: {start}-{end})")
         
         # If no results for this category, generate a placeholder entry
         if not has_results and cat_name:
@@ -45,10 +52,14 @@ async def generate_news_update_section(client, search_results, investment_princi
                 result = search_results[i]
                 query = result.get("query", f"Market data for {cat_name}")
                 content = ""
-                if result.get("results") and len(result["results"]) > 0:
-                    content = result["results"][0].get("content", "No content available")
+                
+                # More robust content extraction with better debugging
+                if result.get("results") and len(result["results"]) > 0 and result["results"][0].get("content"):
+                    content = result["results"][0].get("content")
+                    log_info(f"Processing valid content for {cat_name} (content length: {len(content)})")
                 else:
                     content = f"No content available for {cat_name} market data"
+                    log_info(f"No valid content found for {cat_name} in result {i}")
 
                 # Create a prompt that uses web search to get the latest information
                 prompt = f"""

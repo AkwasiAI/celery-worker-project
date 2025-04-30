@@ -63,17 +63,24 @@ class PortfolioManager:
             console.print(f"[bold green]Successfully uploaded {filename} to Firestore[/bold green]")
         return success
 
-    def get_latest(self, doc_type, output_file=None):
-        """Retrieve the latest document of the specified type"""
+    def get_latest(self, doc_type="reports"):
+        """Get the latest document of a specified type"""
         try:
-            query = self.uploader.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True).limit(1)
-            docs = list(query.stream())
+            # Try with new filter() syntax first
+            try:
+                query = self.uploader.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True).limit(1)
+            except AttributeError:
+                # Fall back to older where() syntax
+                print("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                query = self.uploader.collection.where('doc_type', '==', doc_type).where('is_latest', '==', True).limit(1)
+                
+            results = list(query.stream())
             
-            if not docs:
+            if not results:
                 console.print(f"[bold yellow]No {doc_type} document found[/bold yellow]")
                 return False
             
-            doc_data = docs[0].to_dict()
+            doc_data = results[0].to_dict()
             content = doc_data['content']
             file_format = doc_data.get('file_format', 'text')
             
@@ -89,6 +96,7 @@ class PortfolioManager:
                 syntax = Syntax(formatted_content, "text", theme="monokai", line_numbers=True)
             
             # Save to file if specified
+            output_file = None
             if output_file:
                 with open(output_file, 'w', encoding='utf-8') as f:
                     if file_format == 'json' and isinstance(content, dict):
@@ -111,7 +119,14 @@ class PortfolioManager:
         """List all documents with their metadata, optionally filtered by document type"""
         try:
             if doc_type:
-                query = self.uploader.collection.filter('doc_type', '==', doc_type).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+                # Get all documents of the specified type, sorted by timestamp
+                # Try with new filter() syntax first
+                try:
+                    query = self.uploader.collection.filter('doc_type', '==', doc_type).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+                except AttributeError:
+                    # Fall back to older where() syntax
+                    print("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                    query = self.uploader.collection.where('doc_type', '==', doc_type).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             else:
                 query = self.uploader.collection.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())

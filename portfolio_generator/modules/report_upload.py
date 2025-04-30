@@ -132,7 +132,13 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             
         # Query for the previous report (the latest report before the current one)
         # Modified query to avoid requiring composite index
-        query = portfolios_ref.filter('doc_type', '==', 'report').filter('is_latest', '==', True)
+        try:
+            # Try new filter() syntax first
+            query = portfolios_ref.filter('doc_type', '==', 'report').filter('is_latest', '==', True)
+        except AttributeError:
+            # Fall back to older where() syntax
+            log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+            query = portfolios_ref.where('doc_type', '==', 'report').where('is_latest', '==', True)
         
         # Get all the latest reports and filter in application code to avoid index requirement
         latest_reports = list(query.stream())
@@ -204,7 +210,13 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         alt_collection = db.collection('report-alternatives')
         
         # First, mark all existing alternative reports as not latest
-        alt_query = alt_collection.filter('doc_type', '==', 'report-alternative').filter('is_latest', '==', True)
+        try:
+            # Try new filter() syntax first
+            alt_query = alt_collection.filter('doc_type', '==', 'report-alternative').filter('is_latest', '==', True)
+        except AttributeError:
+            # Fall back to older where() syntax
+            log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+            alt_query = alt_collection.where('doc_type', '==', 'report-alternative').where('is_latest', '==', True)
         alt_docs = list(alt_query.stream())
         log_info(f"Number of existing report-alternative docs to update: {len(alt_docs)}")
         
@@ -242,14 +254,31 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         
         # Generate and upload alternative portfolio weights
         try:
-            weights_query = alt_collection.filter('doc_type', '==', 'portfolio-weights-alternative').filter('is_latest', '==', True)
+            try:
+                # Try new filter() syntax first
+                weights_query = alt_collection.filter('doc_type', '==', 'portfolio-weights-alternative').filter('is_latest', '==', True)
+            except AttributeError:
+                # Fall back to older where() syntax
+                log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                weights_query = alt_collection.where('doc_type', '==', 'portfolio-weights-alternative').where('is_latest', '==', True)
             existing_weights = list(weights_query.stream())
             
             if existing_weights:
                 for wdoc in existing_weights:
                     alt_collection.document(wdoc.id).update({'is_latest': False})
                     
-            orig_query = reports_ref.filter('doc_type', '==', 'portfolio_weights').filter('is_latest', '==', True)
+            reports_ref = db.collection('portfolios')
+            
+            # Find the most recent report that is not the current one
+            # Add compatibility layer for both old and new Firestore API versions
+            try:
+                # Try new filter() syntax first
+                orig_query = reports_ref.filter('doc_type', '==', 'portfolio_weights').filter('is_latest', '==', True)
+            except AttributeError:
+                # Fall back to older where() syntax
+                log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                orig_query = reports_ref.where('doc_type', '==', 'portfolio_weights').where('is_latest', '==', True)
+                
             orig_docs = list(orig_query.stream())
             
             if orig_docs:

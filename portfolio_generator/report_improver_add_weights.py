@@ -73,7 +73,14 @@ async def save_improved_weights(openai_client, assets_list, current_date, output
                 # Query for latest doc with this filename
                 basename = os.path.basename(tmpf_path)
                 print(f"[DEBUG] Querying Firestore for uploaded file with basename: {basename}")
-                docs = list(uploader.collection.filter('filename', '==', basename).order_by('timestamp', direction='DESCENDING').limit(1).stream())
+                # Get the doc by filename
+                # Try with new filter() syntax first
+                try:
+                    docs = list(uploader.collection.filter('filename', '==', basename).order_by('timestamp', direction='DESCENDING').limit(1).stream())
+                except AttributeError:
+                    # Fall back to older where() syntax
+                    print("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                    docs = list(uploader.collection.where('filename', '==', basename).order_by('timestamp', direction='DESCENDING').limit(1).stream())
                 if docs:
                     print(f"[INFO] Uploaded improved weights to Firestore as document: {docs[0].id}")
                 else:

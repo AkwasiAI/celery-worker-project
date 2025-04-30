@@ -126,17 +126,27 @@ class FirestoreUploader:
 
     def _update_latest_flags(self, current_doc_id, doc_type):
         """Set is_latest=False for all documents of the same type except the current one"""
-        # Use the newer filter syntax instead of where
-        query = self.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True)
-        results = query.stream()
-        
-        batch = self.db.batch()
-        for doc in results:
-            if doc.id != current_doc_id:
-                doc_ref = self.collection.document(doc.id)
-                batch.update(doc_ref, {'is_latest': False})
-        
-        batch.commit()
+        try:
+            # First attempt with the newer filter syntax
+            try:
+                query = self.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True)
+                results = query.stream()
+            except AttributeError:
+                # Fall back to older where syntax if filter is not available
+                print("Using older Firestore where() method - consider upgrading google-cloud-firestore")
+                query = self.collection.where('doc_type', '==', doc_type).where('is_latest', '==', True)
+                results = query.stream()
+            
+            batch = self.db.batch()
+            for doc in results:
+                if doc.id != current_doc_id:
+                    doc_ref = self.collection.document(doc.id)
+                    batch.update(doc_ref, {'is_latest': False})
+            
+            batch.commit()
+        except Exception as e:
+            print(f"Error updating latest flags: {str(e)}")
+            # Continue anyway to avoid breaking the entire upload process
         
     def upload_portfolio_data(self, report_path, portfolio_data_path):
         """

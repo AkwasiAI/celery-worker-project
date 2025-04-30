@@ -126,7 +126,8 @@ class FirestoreUploader:
 
     def _update_latest_flags(self, current_doc_id, doc_type):
         """Set is_latest=False for all documents of the same type except the current one"""
-        query = self.collection.where('doc_type', '==', doc_type).where('is_latest', '==', True)
+        # Use the newer filter syntax instead of where
+        query = self.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True)
         results = query.stream()
         
         batch = self.db.batch()

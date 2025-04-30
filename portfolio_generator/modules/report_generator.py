@@ -279,9 +279,11 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     
     # 1. Generate Executive Summary - using the imported prompt
     log_info("Generating executive summary section...")
+    current_year = datetime.now().year
     exec_summary_prompt = EXECUTIVE_SUMMARY_DETAILED_PROMPT.format(
         current_date=current_date,
-        total_word_count=total_word_count
+        total_word_count=total_word_count,
+        current_year=current_year
     )
     
     # Initialize section tracking variables
@@ -292,6 +294,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     log_info("Generating Executive Summary with structured schema and o4-mini model...")
     try:
         # Use the new structured executive summary generator with o4-mini model
+        # Temporarily using o4-mini for debugging to see the raw output
         structured_response = await generate_structured_executive_summary(
             client=client,
             system_prompt=base_system_prompt,
@@ -299,7 +302,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             search_results=formatted_search_results,
             previous_sections={},  # Empty dictionary for previous sections
             target_word_count=per_section_word_count,
-            model="o4-mini"  # Using o4-mini model as requested
+            model="o4-mini"  # Temporarily using o4-mini to see the raw output
         )
         
         # Store the markdown summary in the report sections

@@ -66,7 +66,7 @@ class PortfolioManager:
     def get_latest(self, doc_type, output_file=None):
         """Retrieve the latest document of the specified type"""
         try:
-            query = self.uploader.collection.where('doc_type', '==', doc_type).where('is_latest', '==', True).limit(1)
+            query = self.uploader.collection.filter('doc_type', '==', doc_type).filter('is_latest', '==', True).limit(1)
             docs = list(query.stream())
             
             if not docs:
@@ -111,7 +111,7 @@ class PortfolioManager:
         """List all documents with their metadata, optionally filtered by document type"""
         try:
             if doc_type:
-                query = self.uploader.collection.where('doc_type', '==', doc_type).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+                query = self.uploader.collection.filter('doc_type', '==', doc_type).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             else:
                 query = self.uploader.collection.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())

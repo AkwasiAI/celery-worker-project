@@ -2,7 +2,7 @@
 import os
 import json
 import asyncio
-from typing import Dict, List, Optional, Union, Literal
+from typing import Dict, List, Optional, Union, Literal, Tuple
 from pydantic import BaseModel, Field, validator
 
 import re
@@ -62,58 +62,19 @@ async def generate_structured_executive_summary(
     """
     log_info("Generating structured Executive Summary...")
     
-    # Build a comprehensive prompt that includes instructions for the structured output
-    structured_prompt = f"""
-{user_prompt}
-
-RESPONSE FORMAT:
-Your response must be provided in two parts:
-
-PART 1: EXECUTIVE SUMMARY
-Provide a well-structured markdown executive summary of approximately {target_word_count} words.
-
-PART 2: PORTFOLIO POSITIONS
-After the executive summary, provide a structured list of recommended portfolio positions in this exact JSON format:
-
-```json
-[
-  {{
-    "asset": "TICKER1",
-    "position_type": "LONG", 
-    "allocation_percent": 15,
-    "time_horizon": "6-12 months",
-    "confidence_level": "High"
-  }},
-  {{
-    "asset": "TICKER2",
-    "position_type": "SHORT",
-    "allocation_percent": 5,
-    "time_horizon": "3-6 months",
-    "confidence_level": "Medium"
-  }},
-  ...more positions...
-]
-```
-
-IMPORTANT: 
-- Include at least 10-15 positions to create a diversified portfolio
-- Ensure the allocation_percent values sum to approximately 100%
-- Use only LONG or SHORT for position_type
-- Use High, Medium, or Low for confidence_level
-- Provide realistic time horizons (e.g., "1-3 months", "6-12 months", "1-2 years")
-- Each position must include all 5 required fields
-"""
+    # Build the complete prompt with the existing user_prompt (which already includes EXECUTIVE_SUMMARY_DETAILED_PROMPT)
+    complete_prompt = user_prompt
     
     # Add search results if available
     if search_results and search_results.strip():
-        structured_prompt += f"\n\nHere is the latest information from web searches that should inform your analysis:\n\n{search_results}"
+        complete_prompt += f"\n\nHere is the latest information from web searches that should inform your analysis:\n\n{search_results}"
     
     # Add previous sections for context if available
     if previous_sections and isinstance(previous_sections, dict):
         sections_context = "\n\n## Previous sections of the report include:\n\n"
         for sec_name, sec_content in previous_sections.items():
             sections_context += f"### {sec_name}\n{sec_content}\n\n"
-        structured_prompt += sections_context
+        user_prompt += sections_context
     
     try:
         # Always use chat completions with the formatted search results
@@ -128,27 +89,8 @@ IMPORTANT:
             "type": "json_object"
         }
         
-        # Update the prompt to include clear instructions about the expected JSON structure
-        structured_prompt += """
-        
-IMPORTANT: Your response MUST be a valid JSON object with exactly these two fields:
-1. "summary": A string containing the markdown-formatted executive summary
-2. "portfolio_positions": An array of objects, each with these exact fields:
-   - "asset": Ticker symbol (string)
-   - "position_type": Either "LONG" or "SHORT" (string)
-   - "allocation_percent": Percentage between 0-100 (number)
-   - "time_horizon": Investment timeframe (string)
-   - "confidence_level": Either "High", "Medium", or "Low" (string)
-
-Example of the expected response format:
-{
-  "summary": "# Executive Summary\n\nThe market outlook...",
-  "portfolio_positions": [
-    {"asset": "STNG", "position_type": "LONG", "allocation_percent": 15, "time_horizon": "6-12 months", "confidence_level": "High"},
-    {"asset": "SHEL", "position_type": "SHORT", "allocation_percent": 5, "time_horizon": "3-6 months", "confidence_level": "Medium"}
-  ]
-}
-        """
+        # The user prompt already contains the necessary formatting guidance
+        # No additional JSON formatting instructions needed
         
         log_info(f"Calling {model} with structured JSON response format and formatted search results...")
         try:
@@ -157,7 +99,7 @@ Example of the expected response format:
                 model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": structured_prompt}
+                    {"role": "user", "content": complete_prompt}
                 ]
             )
             
@@ -167,6 +109,10 @@ Example of the expected response format:
             # Extract JSON content directly from the response
             content = response.choices[0].message.content
             log_info(f"Received structured JSON response: {content[:100]}...")
+            # Print the full raw response for debugging
+            print("\nFULL RAW RESPONSE FROM MODEL:\n")
+            print(content)
+            print("\nEND OF RAW RESPONSE\n")
         except Exception as e:
             log_error(f"Error calling {model} with structured format: {str(e)}")
             raise
@@ -220,105 +166,144 @@ Example of the expected response format:
 def extract_structured_parts(content: str) -> tuple[str, str]:
     """
     Extract the summary text and portfolio positions JSON from the model response.
-    IMPORTANT: This function enforces strict structured JSON format with 'summary' and 'portfolio_positions' fields.
-    
+    Supports hidden JSON in HTML comments, JSON code blocks, or direct JSON format.
+
     Args:
-        content: The full model response, expected to be JSON formatted
-        
+        content: The full model response, could be JSON or markdown with embedded JSON
+
     Returns:
         tuple: (summary_text, positions_json)
-        
-    Raises:
-        ValueError: If the response is not in the proper structured JSON format
     """
     log_info("Parsing structured response...")
-    
-    # First check if we have a code block with proper JSON format
-    json_block_start = content.find("```json")
-    if json_block_start != -1:
-        json_block_end = content.find("```", json_block_start + 7)  # Find the closing triple backticks
-        if json_block_end != -1:
-            # Extract the content between the backticks
-            json_text = content[json_block_start + 7:json_block_end].strip()
-            log_info(f"Extracted JSON code block. First 50 chars: {json_text[:50]}...")
-            try:
-                # Try to parse the JSON block
-                # First, try to clean up any invalid escape sequences
-                cleaned_json = _clean_json_text(json_text)
-                log_info("Cleaned JSON for parsing")
+
+    # Check for portfolio positions in HTML comment
+    comment_pattern = re.compile(r"<!-- PORTFOLIO_POSITIONS_JSON:\s*(.+?)\s*-->\s*", re.DOTALL)
+    match = comment_pattern.search(content)
+    if match:
+        try:
+            # Extract the JSON from the comment
+            positions_json = match.group(1).strip()
+            # Clean and parse the JSON
+            cleaned_json = _clean_json_text(positions_json)
+            portfolio_positions = json.loads(cleaned_json)
+            
+            # Normalize position_type to uppercase and confidence_level to accepted values
+            for position in portfolio_positions:
+                # Normalize position_type to uppercase
+                if "position_type" in position and isinstance(position["position_type"], str):
+                    position["position_type"] = position["position_type"].upper()
                 
-                parsed_data = json.loads(cleaned_json)
-                if isinstance(parsed_data, dict) and "summary" in parsed_data and "portfolio_positions" in parsed_data:
-                    # We got a properly structured response
-                    summary_text = parsed_data["summary"]
-                    positions_json = json.dumps(parsed_data["portfolio_positions"])
-                    log_info(f"Successfully parsed JSON from code block with {len(parsed_data['portfolio_positions'])} positions")
-                    return summary_text, positions_json
-                else:
-                    error_message = "JSON in code block missing required fields (summary, portfolio_positions)"
-                    log_error(error_message)
-                    raise ValueError(error_message)
-            except json.JSONDecodeError as e:
-                error_message = f"Failed to parse JSON from code block: {str(e)}"
-                log_error(error_message)
-                raise ValueError(error_message)
-    
-    # If we couldn't extract from a code block, try direct JSON parsing
+                # Normalize confidence_level to one of: High, Medium, Low
+                if "confidence_level" in position and isinstance(position["confidence_level"], str):
+                    confidence = position["confidence_level"]
+                    # Map any extended confidence levels to one of the three accepted values
+                    if confidence.lower() in ["very high", "extremely high", "highest"]:
+                        position["confidence_level"] = "High"
+                    elif confidence.lower() in ["very low", "extremely low", "lowest"]:
+                        position["confidence_level"] = "Low"
+                    # If it's already one of our accepted values, normalize the case
+                    elif confidence.lower() == "high":
+                        position["confidence_level"] = "High"
+                    elif confidence.lower() == "medium":
+                        position["confidence_level"] = "Medium"
+                    elif confidence.lower() == "low":
+                        position["confidence_level"] = "Low"
+                    else: # Default to Medium for unknown values
+                        position["confidence_level"] = "Medium"
+            
+            # If we successfully parsed the JSON, use the text before the comment as the summary
+            summary_text = content[:match.start()].strip()
+            return summary_text, json.dumps(portfolio_positions)
+        except json.JSONDecodeError:
+            pass
+
+    # Pattern for JSON code block
+    code_pattern = re.compile(
+        r"```json\s*(\{.*?\}|\[.*?\])\s*```",
+        flags=re.DOTALL
+    )
+    match = code_pattern.search(content)
+    if match:
+        json_text = match.group(1).strip()
+        try:
+            parsed = json.loads(_clean_json_text(json_text))
+            if isinstance(parsed, dict) and "summary" in parsed and "portfolio_positions" in parsed:
+                # Normalize position_type to uppercase and confidence_level to accepted values
+                for position in parsed["portfolio_positions"]:
+                    # Normalize position_type to uppercase
+                    if "position_type" in position and isinstance(position["position_type"], str):
+                        position["position_type"] = position["position_type"].upper()
+                    
+                    # Normalize confidence_level to one of: High, Medium, Low
+                    if "confidence_level" in position and isinstance(position["confidence_level"], str):
+                        confidence = position["confidence_level"]
+                        # Map any extended confidence levels to one of the three accepted values
+                        if confidence.lower() in ["very high", "extremely high", "highest"]:
+                            position["confidence_level"] = "High"
+                        elif confidence.lower() in ["very low", "extremely low", "lowest"]:
+                            position["confidence_level"] = "Low"
+                        # If it's already one of our accepted values, normalize the case
+                        elif confidence.lower() == "high":
+                            position["confidence_level"] = "High"
+                        elif confidence.lower() == "medium":
+                            position["confidence_level"] = "Medium"
+                        elif confidence.lower() == "low":
+                            position["confidence_level"] = "Low"
+                        else: # Default to Medium for unknown values
+                            position["confidence_level"] = "Medium"
+                return parsed["summary"].strip(), json.dumps(parsed["portfolio_positions"])
+        except json.JSONDecodeError:
+            pass
+
+    # Direct JSON
     try:
-        # Try to parse the entire content as JSON, first cleaning it
-        cleaned_content = _clean_json_text(content)
-        parsed_data = json.loads(cleaned_content)
-        if isinstance(parsed_data, dict) and "summary" in parsed_data and "portfolio_positions" in parsed_data:
-            # We got a properly structured response
-            summary_text = parsed_data["summary"]
-            positions_json = json.dumps(parsed_data["portfolio_positions"])
-            log_info(f"Successfully parsed direct JSON response with {len(parsed_data['portfolio_positions'])} positions")
-            return summary_text, positions_json
-        else:
-            error_message = "Direct JSON missing required fields (summary, portfolio_positions)"
-            log_error(error_message)
-            raise ValueError(error_message)
-    except json.JSONDecodeError as e:
-        error_message = f"Failed to parse as structured JSON - incorrect format received from model: {str(e)}"
-        log_error(error_message)
-        raise ValueError(error_message)
-    
-    # We should never reach here as the above code will either return or raise an exception
-    # But just in case, we'll add a fallback error
-    error_message = "Unknown error parsing structured JSON response"
-    log_error(error_message)
-    raise ValueError(error_message)
+        parsed = json.loads(_clean_json_text(content.strip()))
+        if isinstance(parsed, dict) and "summary" in parsed and "portfolio_positions" in parsed:
+            # Normalize position_type to uppercase and confidence_level to accepted values
+            for position in parsed["portfolio_positions"]:
+                # Normalize position_type to uppercase
+                if "position_type" in position and isinstance(position["position_type"], str):
+                    position["position_type"] = position["position_type"].upper()
+                
+                # Normalize confidence_level to one of: High, Medium, Low
+                if "confidence_level" in position and isinstance(position["confidence_level"], str):
+                    confidence = position["confidence_level"]
+                    # Map any extended confidence levels to one of the three accepted values
+                    if confidence.lower() in ["very high", "extremely high", "highest"]:
+                        position["confidence_level"] = "High"
+                    elif confidence.lower() in ["very low", "extremely low", "lowest"]:
+                        position["confidence_level"] = "Low"
+                    # If it's already one of our accepted values, normalize the case
+                    elif confidence.lower() == "high":
+                        position["confidence_level"] = "High"
+                    elif confidence.lower() == "medium":
+                        position["confidence_level"] = "Medium"
+                    elif confidence.lower() == "low":
+                        position["confidence_level"] = "Low"
+                    else: # Default to Medium for unknown values
+                        position["confidence_level"] = "Medium"
+            return parsed["summary"].strip(), json.dumps(parsed["portfolio_positions"])
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: entire content as summary, empty positions
+    return content.strip(), json.dumps([])
+
 
 def _clean_json_text(json_text: str) -> str:
     """
-    Clean up common JSON issues that might cause parsing errors.
-    
-    Args:
-        json_text: The JSON text to clean
-        
-    Returns:
-        Cleaned JSON text ready for parsing
+    Clean up common JSON issues.
     """
-    # Replace invalid escape sequences
-    # Common issue: backslashes in text that aren't properly escaped
-    # First, handle escaped backslashes (we'll temporarily replace them)
-    cleaned = json_text.replace("\\\\", "__ESCAPED_BACKSLASH__")
-    
-    # Remove lone backslashes not followed by valid escape chars (like ", \, /, b, f, n, r, t, u)
-    cleaned = re.sub(r'\\([^"\\/bfnrtu])', r'\1', cleaned)
-    
-    # Restore properly escaped backslashes
-    cleaned = cleaned.replace("__ESCAPED_BACKSLASH__", "\\\\")
-    
-    # Fix common issues with quotes in JSON
-    # Handle cases where there might be unescaped quotes inside strings
-    # This is more complex and might require a more sophisticated approach
-    # But we can handle some common cases
-    
+    # Temporarily escape valid backslashes
+    json_text = json_text.replace('\\\\', '__ESCAPED_BACKSLASH__')
+    # Remove stray backslashes
+    json_text = re.sub(r'\\(?!["\\/bfnrtu])', '', json_text)
+    # Restore escaped backslashes
+    json_text = json_text.replace('__ESCAPED_BACKSLASH__', '\\\\')
     # Remove control characters
-    cleaned = re.sub(r'[\x00-\x1F\x7F]', '', cleaned)
-    
-    return cleaned
+    json_text = re.sub(r'[\x00-\x1F\x7F]', '', json_text)
+    return json_text
+
 
 def generate_default_portfolio_positions() -> str:
     """

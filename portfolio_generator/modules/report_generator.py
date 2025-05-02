@@ -224,8 +224,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                 log_warning("Automatically continuing without web search data (containerized mode)")
             elif failed_searches > 0:
                 log_warning(f"{failed_searches} out of {len(search_results)} searches failed to return useful content.")
-            
-            # Determine if we have usable search results - matching original logic
+            model="o4-mini"  # Use Claude's o4-mini model - matching original logic
             has_errors = failed_searches > (len(search_results) / 2)  # More than half failed
             
             if has_errors:
@@ -696,12 +695,15 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             formatted_categories.append((cat_name, start_idx, end_idx))
             start_idx = end_idx
         
+        new_categories_akwasi = ["Shipping","Commodities","Central Bank Policies","Macroeconomic News","Global Trade & Tariffs"]
+        
         # Generate the news section - directly await the async function
         news_section = await generate_news_update_section(
             client=client,
-            search_results=search_results_list,
+            search_results=formatted_search_results,
             investment_principles=investment_principles,
-            categories=formatted_categories
+            categories=new_categories_akwasi,
+            model="o4-mini"  # Use Claude's o4-mini model
         )
         
         # Store news section in report_sections dictionary

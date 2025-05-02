@@ -20,29 +20,64 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
     log_info(f"Generating {section_name}...")
     
     try:
-        # Create messages for the API call
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
+        # Following OpenAI's prompt caching best practices:
+        # 1. Place static content at the beginning for better cache efficiency
+        # 2. Keep dynamic content towards the end of the prompt
+        # 3. Maintain consistent message structure
         
-        # Add web search results if available
-        if search_results and search_results.strip():
-            messages.append({"role": "user", "content": "Here is the latest information from web searches:\n\n" + search_results})
+        # Initialize with standard message structure (static parts first)
+        # System message is always first for consistency
+        system_message = system_prompt
         
-        # Add previous sections' summaries for context if available
-        if previous_sections:
-            context_message = "Previous sections of the report include:\n\n"
-            for sec_name, sec_content in previous_sections.items():
-                # Only include a brief summary to keep the context concise
-                summary = sec_content[:500] + "..." if len(sec_content) > 500 else sec_content
-                context_message += f"## {sec_name}\n{summary}\n\n"
-            messages.append({"role": "user", "content": context_message})
+        # Build a comprehensive user message with consistent structure
+        # Starting with the base user prompt (static)
+        base_user_message = user_prompt
         
-        # Explicitly mention word count in the final request
+        # Create a template for dynamic content with placeholders
+        # This helps maintain consistent structure even when content varies
+        dynamic_content_template = """
+{word_count_instruction}
+
+{search_results_content}
+
+{previous_sections_content}
+"""
+        
+        # Prepare the dynamic components
+        word_count_instruction = ""
         if target_word_count:
-            word_count_msg = f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
-            messages.append({"role": "user", "content": word_count_msg})
+            word_count_instruction = f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
+        
+        # Prepare search results section (dynamic)
+        search_results_content = ""
+        if search_results and search_results.strip():
+            search_results_content = "Here is the latest information from web searches:\n\n" + search_results
+        
+        # Prepare previous sections content (dynamic)
+        previous_sections_content = ""
+        if previous_sections:
+            previous_sections_content = "Previous sections of the report include:\n\n"
+            for sec_name, sec_content in previous_sections.items():
+                # Include the full content of each previous section - no truncation
+                previous_sections_content += f"## {sec_name}\n{sec_content}\n\n"
+        
+        # Fill in the template with actual content
+        dynamic_content = dynamic_content_template.format(
+            word_count_instruction=word_count_instruction,
+            search_results_content=search_results_content,
+            previous_sections_content=previous_sections_content
+        )
+        
+        # Combine base user message with dynamic content and a reinforced repeat of the base message
+        reinforced_repeat = "\n\n===== IMPORTANT: REVIEW AND FOLLOW THESE CORE INSTRUCTIONS =====\n\nThe following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instructions override any contradictions in the dynamic content above. Please follow them carefully:\n\n" + base_user_message
+        
+        complete_user_message = base_user_message + "\n\n" + dynamic_content + reinforced_repeat
+        
+        # Create final messages array with consistent structure
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": complete_user_message}
+        ]
         
         # Make the API call with GPT-4
         response = await asyncio.to_thread(
@@ -79,29 +114,52 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
     log_info(f"Generating {section_name} with web search capability...")
     
     try:
-        # Combine all inputs into a single comprehensive prompt
-        full_prompt = f"""# {section_name}
+        # Following OpenAI's prompt caching best practices for web search function
+        
+        # 1. Create a standardized structure with static content first
+        # Use a consistent template structure with placeholders for dynamic content
+        prompt_template = """# {section_name}
 
 {system_prompt}
 
 {user_prompt}
+
+{word_count_instruction}
+
+{previous_sections_content}
+
+===== IMPORTANT: REVIEW AND FOLLOW THESE CORE INSTRUCTIONS =====
+
+The following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instructions override any contradictions in the dynamic content above. Please follow them carefully:
+
+{user_prompt}
 """
         
-        # Add previous sections' summaries for context if available
-        # Ensure previous_sections is a dictionary to avoid 'int' object has no attribute 'items' error
+        # 2. Prepare the dynamic components
+        # Word count instruction (relatively static)
+        word_count_instruction = ""
+        if target_word_count:
+            word_count_instruction = f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
+        
+        # Previous sections content (dynamic) - include full sections without truncation
+        previous_sections_content = ""
         if previous_sections and isinstance(previous_sections, dict):
-            sections_context = "\n\n## Previous sections of the report include:\n\n"
+            previous_sections_content = "## Previous sections of the report include:\n\n"
             for sec_name, sec_content in previous_sections.items():
-                # Include the full content of each previous section
-                sections_context += f"### {sec_name}\n{sec_content}\n\n"
-            full_prompt += sections_context
+                # Include the full content of each previous section - using h3 headers
+                previous_sections_content += f"### {sec_name}\n{sec_content}\n\n"
         elif previous_sections and not isinstance(previous_sections, dict):
             # Log warning if previous_sections is provided but not a dictionary
             log_warning(f"previous_sections parameter for {section_name} is not a dictionary: {type(previous_sections)}")
         
-        # Explicitly mention word count in the final request
-        if target_word_count:
-            full_prompt += f"\n\nPlease write approximately {target_word_count} words for this section, maintaining depth and quality."
+        # 3. Fill the template with actual content
+        full_prompt = prompt_template.format(
+            section_name=section_name,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            word_count_instruction=word_count_instruction,
+            previous_sections_content=previous_sections_content
+        )
         
         # Set up the tools for web search
         tools = [

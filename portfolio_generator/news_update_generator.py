@@ -20,4 +20,6 @@ def generate_news_update_section(client, search_results, investment_principles, 
     """
     # Delegate to the implementation in the modules directory
     from portfolio_generator.modules.news_update_generator import generate_news_update_section as _generate
-    return _generate(client, search_results, investment_principles, categories, max_words)
+    # Pass parameters in the right order - categories before investment_principles
+    # Also pass model="o4-mini" as default instead of max_words which isn't used
+    return _generate(client=client, search_results=search_results, categories=categories, investment_principles=investment_principles, model="o4-mini")

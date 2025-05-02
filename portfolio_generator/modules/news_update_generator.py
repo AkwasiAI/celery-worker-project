@@ -1,152 +1,195 @@
 """News update section generator for portfolio reports with web search capabilities."""
 import re
 import asyncio
+from typing import List, Dict, Any, Tuple
 from openai import OpenAI
 from portfolio_generator.modules.logging import log_info, log_warning, log_error
 
-async def generate_news_update_section(client, search_results, investment_principles, categories, max_words=50):
-    """
-    Generate the News Update section using the LLM with web search for up-to-date information.
+async def generate_news_update_section(client, search_results, categories, investment_principles="", model="o4-mini"):
+    """Generate a news update section by category using web search results.
     
     Args:
         client: OpenAI client
-        search_results: List of search result dicts (from Perplexity)
-        investment_principles: String with Orasis Capital's investment principles
-        categories: List of (category_name, start_idx, end_idx)
-        max_words: Maximum words for the summary
+        search_results: List of search results from web search
+        categories: List of categories to include in the news update
+        investment_principles: Investment principles to include in the prompt
+        model: OpenAI model to use
         
     Returns:
-        Markdown string for the News Update section
+        str: Generated news update section
     """
     log_info("Generating News Update section with web search capabilities...")
     section_md = ["# Latest Market News\n"]
-
-    for cat_name, start, end in categories:
-        cat_md = [f"## {cat_name}\n"]
-        news_number = 1
+    
+    # Handle categories that can be either list of strings or list of tuples
+    processed_categories = []
+    for cat in categories:
+        if isinstance(cat, tuple) and len(cat) >= 3:
+            # This is the original format (cat_name, start_idx, end_idx)
+            processed_categories.append((cat[0], cat[1], cat[2]))
+        elif isinstance(cat, str):
+            # This is a simple string category
+            processed_categories.append((cat, 0, 0))  # Use dummy indices
+        else:
+            log_warning(f"Skipping invalid category format: {cat}")
+    
+    log_info(f"Processed {len(processed_categories)} categories for news update")
+    
+    # Check if we have any search results - handle both list and string formats
+    if not search_results:
+        log_warning("No search results available for News Update section")
+        for cat_name, _, _ in processed_categories:
+            section_md.append(f"## {cat_name}\n\n*No recent news available for {cat_name}. This section will be updated in the next report.*\n\n")
+        return "\n".join(section_md)
+    
+    # Initialize variables for either format
+    valid_results_count = 0
+    all_formatted_results = ""
+    
+    # Handle string format (from format_search_results function)
+    if isinstance(search_results, str):
+        log_info("Processing pre-formatted search results string")
+        all_formatted_results = search_results
+        if all_formatted_results and all_formatted_results.strip():
+            log_info(f"Using pre-formatted search results - length: {len(all_formatted_results)} chars")
+            valid_results_count = all_formatted_results.count('---Result ')
+        else:
+            log_warning("Received empty pre-formatted search results string")
+    
+    # Handle list format (original)
+    else:
+        log_info(f"Processing search results list - {len(search_results)} items")
+    
+    # If it's not a string, process the list format
+    if not isinstance(search_results, str):
+        log_info(f"Using direct raw search results approach instead of field extraction")
         
-        # Check if we have any valid search results for this category
-        has_results = False
-        valid_results_count = 0
-        
-        for i in range(start, end):
-            if i < len(search_results):
-                result = search_results[i]
-                # Check if this result has actual content
-                if result.get("results") and len(result["results"]) > 0 and result["results"][0].get("content"):
-                    has_results = True
-                    valid_results_count += 1
-        
-        log_info(f"Category: {cat_name} - Valid results: {valid_results_count} (Index range: {start}-{end})")
-        
-        # If no results for this category, generate a placeholder entry
-        if not has_results and cat_name:
-            log_info(f"No search results for {cat_name}, using placeholder")
-            placeholder_news = f"{news_number}. Latest {cat_name} Trends\n\nSummary: Current market data and trends in {cat_name}.\n\nCommentary: Monitoring developments in {cat_name} remains essential for our investment strategy."
-            cat_md.append(placeholder_news)
-            news_number += 1
-        
-        # Process actual search results if available
-        for i in range(start, end):
-            if i < len(search_results):
-                result = search_results[i]
-                query = result.get("query", f"Market data for {cat_name}")
-                content = ""
+        for i, result in enumerate(search_results):
+            try:
+                # Extract query for context
+                query = result.get("query", f"Search query {i}")
                 
-                # More robust content extraction with better debugging
-                if result.get("results") and len(result["results"]) > 0 and result["results"][0].get("content"):
-                    content = result["results"][0].get("content")
-                    log_info(f"Processing valid content for {cat_name} (content length: {len(content)})")
-                else:
-                    content = f"No content available for {cat_name} market data"
-                    log_info(f"No valid content found for {cat_name} in result {i}")
+                # Format the entire result dictionary as a string
+                result_str = str(result)
+                # Clean up the result string to make it more readable
+                result_str = result_str.replace("{", "{\n  ").replace("', '", "',\n  '").replace("': '", "': ").replace("}", "\n}\n")
+                
+                # Add the formatted result to the consolidated string
+                all_formatted_results += f"### {query} (Full Result)\n```\n{result_str}\n```\n\n"
+                log_info(f"Added raw search result {i} for query '{query}' (approx {len(result_str)} chars)")
+                valid_results_count += 1
+            except Exception as e:
+                log_warning(f"Error processing search result {i}: {e}")
+        
+        # Log the total content size
+        log_info(f"Total raw search results content: {len(all_formatted_results)} characters from {valid_results_count} results")
+    
+    # Add a header if using the list format and nothing was found in the pre-formatted string
+    if not isinstance(search_results, str) and all_formatted_results.strip():
+        all_formatted_results = "\n\nWeb Search Results (current as of 2025):\n\n" + all_formatted_results
+    
+    # Only show a warning if we couldn't format any results at all
+    if not all_formatted_results.strip():
+        log_warning("No search results could be formatted for News Update section")
+        for cat_name, _, _ in processed_categories:
+            section_md.append(f"## {cat_name}\n\n*No recent news available for {cat_name}. This section will be updated in the next report.*\n\n")
+        return "\n".join(section_md)
+    
+    # Generate content for each category
+    for cat_name, _, _ in processed_categories:
+        cat_md = [f"## {cat_name}\n"]
+        
+        try:
+            # Create a more focused system prompt incorporating investment principles if available
+            system_prompt = f"""You are an expert analyst synthesizing market news for an investment portfolio report. 
+Focus on creating concise, data-driven insights for the '{cat_name}' category that would be valuable for 
+investment decision-making. Prioritize recent developments, avoid speculative language, and maintain a factual, analytical tone.
 
-                # Create a prompt that uses web search to get the latest information
-                prompt = f"""
-# Investment Market News Analysis
+{investment_principles if investment_principles else ""}
 
-You are an expert investment analyst at Orasis Capital analyzing recent market news.
+If no relevant information is available for '{cat_name}', indicate this clearly."""
+            
+            # Create a user prompt that asks the model to extract relevant information for this category
+            # Following the pattern: state the prompt, add context, gold standard example, repeat the prompt
+            user_prompt = f"""TASK: Extract and synthesize ONLY information relevant to '{cat_name}' from market research data.
 
-## Investment Principles
-{investment_principles}
+CONTEXT:
+- You are preparing a news update section for an investment portfolio report
+- This section focuses specifically on {cat_name}
+- The update should be 200-250 words
+- Only include information directly related to {cat_name}
+- Focus on recent developments with factual, analytical tone
+- If insufficient information is available, use the placeholder message
 
-## News Details
-Category: {cat_name}
-Search Query: {query}
+GOLD STANDARD EXAMPLE (for Technology sector):
 
-Initial Content: {content}
+Recent developments in the technology sector highlight significant shifts in market dynamics. Apple announced record quarterly revenues of $97.3 billion, exceeding analyst expectations by 4.2%, driven primarily by strong services growth (+17.3% YoY) and robust iPhone sales. This performance stands in contrast to semiconductor manufacturers, where ongoing supply chain constraints have impacted production capacity.
 
-## Task
-1. Search for the latest news and market data about {cat_name} (last 7 days if possible)
-2. Generate a concise, informative title (no more than 10 words)
-3. Summarize the key market developments in no more than {max_words} words
-4. Provide a brief commentary (2-3 sentences) explaining the investment implications
+Microsoft's cloud services division posted 32% growth, indicating accelerating enterprise digital transformation post-pandemic. Noteworthy is the 45% increase in cybersecurity revenues, reflecting heightened focus on digital infrastructure protection amid rising global threats.
 
-## Required Format
-Your response MUST follow this exact format:
+The venture capital landscape shows early-stage AI investments increasing 23% over Q1, with particular emphasis on generative AI applications in enterprise software. Meanwhile, regulatory scrutiny continues to intensify, with the EU's Digital Markets Act implementation timeline creating compliance challenges for major platforms.
 
-Title: <Your generated title>
-Summary: <Your detailed summary>
-Commentary: <Your investment commentary>
+Analysts anticipate potential margin pressure in Q3 due to persistent inflation in component costs and increased R&D investments across the sector.
+
+DATA:
+{all_formatted_results}
+
+TASK REPEATED:
+From the above market research data, extract and synthesize ONLY information relevant to '{cat_name}'. 
+Write a concise news update (200-250 words) focused specifically on '{cat_name}'. 
+Focus on the most relevant and recent developments. Present information in a structured, clear format.
+
+If you cannot find sufficient relevant information about '{cat_name}' in the data, respond with: 
+"*No recent news available for {cat_name}. This section will be updated in the next report.*"
 """
 
-                try:
-                    log_info(f"Generating news update for {cat_name} with web search...")
-                    # Use GPT-4.1 with web search capabilities for up-to-date information
-                    response = await asyncio.to_thread(
-                        client.responses.create,
-                        model="gpt-4.1",  # Using GPT-4.1 which supports web search
-                        input=prompt,
-                        tools=[{"type": "web_search_preview"}]  # Enable web search
-                    )
-                    
-                    # Extract the text content from the response
-                    if response and response.output and len(response.output) > 1:
-                        text = response.output[1].content[0].text
-                        log_info(f"Successfully generated news for {cat_name}")
-                    else:
-                        log_warning(f"Unexpected response format for {cat_name}")
-                        text = f"Title: Latest {cat_name} Developments\nSummary: Unable to retrieve detailed information.\nCommentary: Ongoing monitoring remains essential."
-                        
-                except Exception as e:
-                    log_error(f"Error generating news for {cat_name}: {str(e)}")
-                    text = f"Title: {cat_name} Market Update\nSummary: Unable to retrieve market data at this time.\nCommentary: Continued monitoring of this sector is recommended."
-                
-                # Extract the formatted sections using regex
-                title, summary, commentary = "", "", ""
-                title_match = re.search(r"Title:\s*(.*?)(?:\n|$)", text, re.IGNORECASE | re.DOTALL)
-                summary_match = re.search(r"Summary:\s*(.*?)(?:\nCommentary:|$)", text, re.IGNORECASE | re.DOTALL)
-                commentary_match = re.search(r"Commentary:\s*(.*?)(?:\n|$)", text, re.IGNORECASE | re.DOTALL)
-
-                if title_match:
-                    title = title_match.group(1).strip()
-                else:
-                    title = f"Latest {cat_name} Trends"
-                    
-                if summary_match:
-                    summary = summary_match.group(1).strip()
-                else:
-                    summary = f"Current market data for {cat_name}."
-                    
-                if commentary_match:
-                    commentary = commentary_match.group(1).strip()
-                else:
-                    commentary = f"Monitoring developments in {cat_name} remains essential for our investment strategy."
-
-                # Format the news item with proper spacing
-                news_item = f"{news_number}. {title}\n\nSummary: {summary}\n\nCommentary: {commentary}"
-                cat_md.append(news_item)
-                news_number += 1
-                
-        section_md.extend(cat_md)
-        section_md.append("\n")  # Add extra spacing between categories
-
-    # Flatten and join markdown sections
-    section_md_flat = []
-    for group in section_md:
-        if isinstance(group, list):
-            section_md_flat.extend(group)
-        else:
-            section_md_flat.append(group)
+            # Generate content for this category
+            log_info(f"Generating content for category: {cat_name}")
+            # Define base parameters that work with all models
+            completion_params = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+            }
             
-    return "\n".join(section_md_flat)
+            # Check if it's an OpenAI model type that supports max tokens
+            if "gpt" in model.lower() or model.startswith("gpt-"):
+                completion_params["max_tokens"] = 500
+                completion_params["temperature"] = 0.7  # GPT models support temperature
+
+            log_info(f"Using model: {model} with custom parameters: {str(completion_params.keys())}")
+            
+            try:
+                # Make the API call - handle both synchronous and asynchronous clients
+                if hasattr(client.chat.completions.create, "__await__"):
+                    # This is an async client
+                    response = await client.chat.completions.create(**completion_params)
+                else:
+                    # This is a synchronous client
+                    response = client.chat.completions.create(**completion_params)
+            except Exception as e:
+                log_warning(f"Error calling OpenAI API: {e}")
+                raise
+            
+            # Extract the content
+            content = response.choices[0].message.content
+            
+            # Verify that the content is not empty or just whitespace
+            if content and content.strip():
+                cat_md.append(content)
+                log_info(f"Successfully generated content for category: {cat_name} ({len(content)} chars)")
+            else:
+                # Handle empty content
+                log_warning(f"Generated empty content for category: {cat_name}")
+                cat_md.append(f"*No recent news available for {cat_name}. This section will be updated in the next report.*")
+            
+        except Exception as e:
+            log_warning(f"Error generating news update for {cat_name}: {e}")
+            cat_md.append(f"*Error retrieving news for {cat_name}. This section will be updated in the next report.*\n\n")
+        
+        # Add this category to the section
+        section_md.append("\n".join(cat_md))
+    
+    return "\n".join(section_md)

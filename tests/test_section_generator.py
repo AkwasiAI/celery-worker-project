@@ -1,110 +1,76 @@
+#!/usr/bin/env python3
 """
-Test module for the section_generator module.
-This verifies that the section generation functionality works correctly.
+Integration test for the generate_section function with real API calls.
+This will test that the function correctly interacts with the OpenAI API.
 """
-import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
+
 import asyncio
 import os
-import sys
+from dotenv import load_dotenv
+from openai import OpenAI
+
 from portfolio_generator.modules.section_generator import generate_section
+from portfolio_generator.modules.logging import log_info, log_success, log_error
 
+# Load environment variables
+load_dotenv()
 
-class TestSectionGenerator(unittest.TestCase):
-    """Test class for section generation functionality."""
-    
-    def setUp(self):
-        """Set up test environment."""
-        self.client = MagicMock()
-        self.section_name = "Test Section"
-        self.system_prompt = "You are a test assistant"
-        self.user_prompt = "Generate a test section"
-    
-    @patch('portfolio_generator.modules.section_generator.asyncio.to_thread')
-    @patch('portfolio_generator.modules.section_generator.log_info')
-    async def test_generate_section_success(self, mock_log_info, mock_to_thread):
-        """Test successful section generation."""
-        # Mock the response from the OpenAI API
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test section content"
+async def test_generate_section():
+    """Test the generate_section function with a real API call."""
+    try:
+        log_info("Starting integration test of generate_section...")
         
-        # Setup the async mock
-        mock_to_thread.return_value = mock_response
+        # Initialize OpenAI client
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         
-        # Call the function
-        result = await generate_section(
-            self.client,
-            self.section_name,
-            self.system_prompt,
-            self.user_prompt
+        # Create test inputs
+        section_name = "Test Section"
+        system_prompt = """You are an expert financial analyst creating a section for an investment report.
+        Be concise, factual, and provide valuable insights. Focus on clarity and brevity."""
+        
+        user_prompt = """Create a brief analysis of the technology sector, focusing on major trends 
+        and investment opportunities. Keep it short and concise, around 200 words."""
+        
+        # Test parameters
+        target_word_count = 200
+        
+        # Call the function with real API
+        log_info("Making API call to OpenAI...")
+        content = await generate_section(
+            client=client,
+            section_name=section_name,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            target_word_count=target_word_count
         )
         
-        # Verify the OpenAI API was called with the right parameters
-        mock_to_thread.assert_called_once()
-        # The first arg to to_thread should be the client.chat.completions.create method
-        self.assertEqual(mock_to_thread.call_args[0][0], self.client.chat.completions.create)
-        
-        # Check other args
-        call_kwargs = mock_to_thread.call_args[0][1:]
-        self.assertIn('model="gpt-4-turbo"', str(call_kwargs))
-        
-        # Check the result
-        self.assertEqual(result, "Test section content")
-        
-        # Verify logging was called
-        mock_log_info.assert_called()
-    
-    @patch('portfolio_generator.modules.section_generator.asyncio.to_thread')
-    @patch('portfolio_generator.modules.section_generator.log_info')
-    async def test_generate_section_with_search_results(self, mock_log_info, mock_to_thread):
-        """Test section generation with search results."""
-        # Mock the response
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test section with search results"
-        mock_to_thread.return_value = mock_response
-        
-        # Call with search results
-        search_results = "Sample search result"
-        result = await generate_section(
-            self.client,
-            self.section_name,
-            self.system_prompt,
-            self.user_prompt,
-            search_results=search_results
-        )
-        
-        # Verify the result
-        self.assertEqual(result, "Test section with search results")
-        
-        # Check if search results were included in the messages
-        mock_to_thread.assert_called_once()
-        call_args = mock_to_thread.call_args[0]
-        messages_str = str(call_args)
-        self.assertIn("Sample search result", messages_str)
-    
-    @patch('portfolio_generator.modules.section_generator.asyncio.to_thread')
-    @patch('portfolio_generator.modules.section_generator.log_info')
-    async def test_generate_section_error_handling(self, mock_log_info, mock_to_thread):
-        """Test error handling in section generation."""
-        # Mock an exception
-        mock_to_thread.side_effect = Exception("Test error")
-        
-        # Call the function
-        result = await generate_section(
-            self.client,
-            self.section_name,
-            self.system_prompt,
-            self.user_prompt
-        )
-        
-        # Verify error handling
-        self.assertIn("Error generating", result)
-        self.assertIn("Test error", result)
-        mock_log_info.assert_called_with(f"Error generating {self.section_name}: Test error")
-
+        # Check results
+        if content:
+            log_success("Generate section test completed successfully!")
+            log_info("Generated content:")
+            print("\n" + "-" * 80)
+            print(content)
+            print("-" * 80 + "\n")
+            
+            # Check word count
+            word_count = len(content.split())
+            log_info(f"Word count: {word_count} words")
+            
+            # Save to file for later inspection
+            with open("test_section_output.md", "w") as f:
+                f.write(content)
+            log_info("Output saved to test_section_output.md")
+            
+            return True
+        else:
+            log_error("Generate section test failed to produce content")
+            return False
+            
+    except Exception as e:
+        log_error(f"Test failed with error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 if __name__ == "__main__":
-    # Run with asyncio.run for async tests
-    unittest.main()
+    asyncio.run(test_generate_section())

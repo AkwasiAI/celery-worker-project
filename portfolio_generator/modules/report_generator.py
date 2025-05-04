@@ -715,6 +715,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     
     # Define the section order
     section_order = [
+        "Latest Market News",
         "Executive Summary",
         "Global Trade & Economy",
         "Energy Markets",
@@ -724,7 +725,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         "Benchmarking & Performance",
         "Risk Assessment",
         "Conclusion & Outlook",
-        "Latest Market News",
         "References & Sources"
     ]
     

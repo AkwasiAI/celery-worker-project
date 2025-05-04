@@ -134,11 +134,11 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         # Modified query to avoid requiring composite index
         try:
             # Try new filter() syntax first
-            query = portfolios_ref.filter('doc_type', '==', 'report').filter('is_latest', '==', True)
+            query = portfolios_ref.filter('doc_type', '==', 'reports').filter('is_latest', '==', True)
         except AttributeError:
             # Fall back to older where() syntax
             log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-            query = portfolios_ref.where('doc_type', '==', 'report').where('is_latest', '==', True)
+            query = portfolios_ref.where('doc_type', '==', 'reports').where('is_latest', '==', True)
         
         # Get all the latest reports and filter in application code to avoid index requirement
         latest_reports = list(query.stream())

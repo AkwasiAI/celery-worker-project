@@ -102,42 +102,44 @@ async def generate_news_update_section(client, search_results, categories, inves
         try:
             # Create a more focused system prompt incorporating investment principles if available
             system_prompt = f"""You are an expert analyst synthesizing market news for an investment portfolio report. 
-Focus on creating concise, data-driven insights for the '{cat_name}' category that would be valuable for 
-investment decision-making. Prioritize recent developments, avoid speculative language, and maintain a factual, analytical tone.
+You need to identify key headlines related to the '{cat_name}' category and explain how each connects to investment principles.
+Maintain a factual, analytical tone and focus on recent, impactful developments.
 
 {investment_principles if investment_principles else ""}
 
 If no relevant information is available for '{cat_name}', indicate this clearly."""
             
-            # Create a user prompt that asks the model to extract relevant information for this category
-            # Following the pattern: state the prompt, add context, gold standard example, repeat the prompt
-            user_prompt = f"""TASK: Extract and synthesize ONLY information relevant to '{cat_name}' from market research data.
+            # Create a user prompt that asks the model to extract headlines and relate them to investment principles
+            # Following the pattern: state the prompt, add context, format example, repeat the prompt
+            user_prompt = f"""TASK: Extract key headlines relevant to '{cat_name}' from market research data and explain how each relates to investment principles.
 
 CONTEXT:
 - You are preparing a news update section for an investment portfolio report
 - This section focuses specifically on {cat_name}
-- The update should be 200-250 words
+- Format should be: headlines as subheadings, each with a ~50 word summary relating to investment principles
 - Only include information directly related to {cat_name}
-- Focus on recent developments with factual, analytical tone
+- Focus on 3-5 recent, impactful headlines with clear investment implications
 - If insufficient information is available, use the placeholder message
 
-GOLD STANDARD EXAMPLE (for Technology sector):
+FORMAT EXAMPLE (for Shipping sector):
 
-Recent developments in the technology sector highlight significant shifts in market dynamics. Apple announced record quarterly revenues of $97.3 billion, exceeding analyst expectations by 4.2%, driven primarily by strong services growth (+17.3% YoY) and robust iPhone sales. This performance stands in contrast to semiconductor manufacturers, where ongoing supply chain constraints have impacted production capacity.
+## Shipping
 
-Microsoft's cloud services division posted 32% growth, indicating accelerating enterprise digital transformation post-pandemic. Noteworthy is the 45% increase in cybersecurity revenues, reflecting heightened focus on digital infrastructure protection amid rising global threats.
+### Shanghai ports close due to COVID
+- This supply chain disruption creates potential investment opportunities in logistics alternatives and companies with robust distribution networks. Our principle of seeking discounted assets in temporary distress applies here, as affected shipping companies may become undervalued.
 
-The venture capital landscape shows early-stage AI investments increasing 23% over Q1, with particular emphasis on generative AI applications in enterprise software. Meanwhile, regulatory scrutiny continues to intensify, with the EU's Digital Markets Act implementation timeline creating compliance challenges for major platforms.
-
-Analysts anticipate potential margin pressure in Q3 due to persistent inflation in component costs and increased R&D investments across the sector.
+### LA fires close Port of Los Angeles
+- The temporary capacity reduction aligns with our counter-cyclical investment approach. Companies with diversified shipping routes and contingency plans should outperform peers, supporting our investment principle of prioritizing operational resilience during market disruptions.
 
 DATA:
 {all_formatted_results}
 
 TASK REPEATED:
-From the above market research data, extract and synthesize ONLY information relevant to '{cat_name}'. 
-Write a concise news update (200-250 words) focused specifically on '{cat_name}'. 
-Focus on the most relevant and recent developments. Present information in a structured, clear format.
+From the above market research data, extract 3-5 key headlines relevant to '{cat_name}'. 
+For each headline:
+1. Present it as a Markdown subheading (###)
+2. Follow with a ~50-word explanation of how it relates to our investment principles
+3. Focus on investment implications, opportunities, or risks
 
 If you cannot find sufficient relevant information about '{cat_name}' in the data, respond with: 
 "*No recent news available for {cat_name}. This section will be updated in the next report.*"

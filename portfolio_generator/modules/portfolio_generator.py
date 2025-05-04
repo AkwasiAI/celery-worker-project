@@ -8,7 +8,7 @@ from portfolio_generator.modules.logging import log_info, log_warning, log_error
 from portfolio_generator.modules.data_extraction import extract_portfolio_data_from_sections, infer_region_from_asset
 from portfolio_generator.modules.utils import is_placeholder_rationale
 
-async def generate_portfolio_json(client, assets_list, current_date, report_content, search_client=None, search_results=None):
+async def generate_portfolio_json(client, assets_list, current_date, report_content, investment_principles="", search_client=None, search_results=None):
     """Generate the structured JSON portfolio data based on report content.
     
     The report content is treated as the source of truth for asset weights and allocations.
@@ -20,6 +20,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         assets_list: List of assets from previous reports or default portfolio
         current_date: Current date for the report
         report_content: Full report content to extract data from
+        investment_principles: Investment principles to apply to asset selection and rationale
         search_client: Optional search client for additional information
         search_results: Optional search results to include
         
@@ -27,36 +28,96 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         str: JSON string with portfolio data
     """
     try:
-        log_info("Generating portfolio JSON data from report content...")
+        log_info("Generating portfolio JSON from report content")
         
-        # First attempt direct extraction from report content
-        extracted_data = extract_portfolio_data_from_sections({}, current_date, report_content)
+        # Construct a prompt asking to generate portfolio JSON
+        system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
+        Your goal is to identify all assets mentioned in the report and organize them into a structured JSON format.
+
+        {investment_principles if investment_principles else ""}
+
+        Use only the following categories: Shipping Equities/Credit, Commodities, ETFs, Equity Indices, Fixed Income.
+        Use only the following regions: North America, Europe, Asia, Latin America, Africa, Oceania. If the region is unclear, assign "Global".
+        """
         
-        # If extraction found assets, use that data
-        if extracted_data.get("data", {}).get("assets") and len(extracted_data["data"]["assets"]) > 0:
-            log_info(f"Successfully extracted {len(extracted_data['data']['assets'])} assets directly from report")
-            portfolio_json = json.dumps(extracted_data, indent=2)
-            return portfolio_json
+        gold_standard = """{
+          "portfolio": {
+            "date": "2025-05-01",
+            "assets": [
+              {
+                "ticker": "AAPL",
+                "name": "Apple Inc.",
+                "position": "LONG",
+                "weight": 0.08,
+                "target_price": 225.50,
+                "horizon": "12-18M",
+                "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
+                "region": "North America",
+                "sector": "Technology"
+              },
+              {
+                "ticker": "WMT",
+                "name": "Walmart Inc.",
+                "position": "LONG",
+                "weight": 0.05,
+                "target_price": 82.75,
+                "horizon": "6-12M",
+                "rationale": "Walmart's defensive characteristics and e-commerce growth support our counter-cyclical investment approach during inflationary periods, providing portfolio stability while maintaining growth potential.",
+                "region": "North America",
+                "sector": "Consumer Staples"
+              },
+              {
+                "ticker": "GS",
+                "name": "Goldman Sachs Group Inc.",
+                "position": "SHORT",
+                "weight": 0.03,
+                "target_price": 340.00,
+                "horizon": "3-6M",
+                "rationale": "Increased regulatory pressure and declining investment banking revenues run counter to our principle of targeting businesses with sustainable competitive advantages in growing markets.",
+                "region": "North America",
+                "sector": "Financials"
+              }
+            ],
+            "portfolio_stats": {
+              "total_assets": 15,
+              "avg_position_size": 0.067,
+              "sector_exposure": {
+                "Technology": 0.32,
+                "Healthcare": 0.18,
+                "Consumer Staples": 0.15,
+                "Financials": 0.12,
+                "Energy": 0.10,
+                "Industrials": 0.08,
+                "Materials": 0.05
+              },
+              "regional_exposure": {
+                "North America": 0.65,
+                "Europe": 0.20,
+                "Asia": 0.15
+              },
+              "investment_type_breakdown": {
+                "LONG": 0.85,
+                "SHORT": 0.15
+              }
+            }
+          }
+        }"""
         
-        # If direct extraction failed, fall back to generative approach
-        log_warning("Direct extraction failed, using generative approach to create portfolio JSON")
+        user_prompt = f"""Generate a structured JSON object representing the current investment portfolio based on the provided report content.
         
-        # Create a prompt for generating the portfolio JSON
-        prompt = f"""
-        Based on the investment portfolio report below, extract the portfolio positions and create a detailed JSON structure.
-        
-        The JSON should follow this exact structure:
+        The JSON should follow this format:
         {{
-          "data": {{
-            "report_date": "{current_date}",
+          "portfolio": {{
+            "date": "{current_date}",
             "assets": [
               {{
-                "name": "Asset Name",
+                "ticker": "TICKER",
+                "name": "Full asset name",
                 "position": "LONG or SHORT",
                 "weight": 0.XX (decimal, not percentage),
                 "target_price": XX.XX (numerical target price),
-                "horizon": "6-12M or 3-6M or 12-18M or 12M+",
-                "rationale": "Specific investment rationale",
+                "horizon": "6-12M or 3-6M or 12-18M or 18M+",
+                "rationale": "Specific investment rationale tied to investment principles",
                 "region": "Region name",
                 "sector": "Sector name"
               }}
@@ -80,25 +141,31 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
           }}
         }}
         
-        Important guidelines:
+        Here is a gold standard example of what the output should look like:
+        {gold_standard}
+        
+        Report content:
+        {report_content}
+        
+        TASK REPEATED: Extract all portfolio assets and statistics from the report content and format them in the specified JSON structure.
+        
+        IMPORTANT GUIDELINES:
         1. Include ALL assets mentioned in the report
         2. Calculate the sector_exposure, regional_exposure, and investment_type_breakdown based on asset weights
         3. Positions must be either "LONG" or "SHORT" (uppercase)
         4. Weights must sum to approximately 1.0
         5. Only include valid numerical target prices when available
-        6. Horizons must be one of: "6-12M", "3-6M", "12-18M", or "12+"
-        
-        Report content:
-        {report_content[:10000]}  # Limit to first 10000 chars for token limits
+        6. Horizons must be one of: "6-12M", "3-6M", "12-18M", or "18M+"
+        7. Regions must be one of: "North America", "Europe", "Asia", "Latin America", "Africa", "Oceania", or "Global" (use "Global" if unknown)
+        8. Each asset rationale should clearly connect to the investment principles
         """
+
         
         # Make the API call
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=2000
+            model="o4-mini",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
         )
         
         # Extract potential JSON from the response
@@ -126,6 +193,13 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 return json.dumps(portfolio_data, indent=2)
             except json.JSONDecodeError:
                 log_error("Could not extract valid JSON from response")
+        
+        # Fallback: direct extraction after AI methods
+        log_info("Falling back to direct extraction for portfolio JSON generation")
+        extracted_data = extract_portfolio_data_from_sections({}, current_date, report_content)
+        if extracted_data and 'assets' in extracted_data and len(extracted_data['assets']) > 0:
+            log_info(f"Successfully extracted {len(extracted_data['assets'])} assets via direct extraction fallback")
+            return extracted_data
         
         # If everything else failed, create a basic structure with the assets list
         fallback_data = {
@@ -228,13 +302,15 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         {alt_report_content[:10000]}  # Limit for token constraints
         """
         
-        # Make the API call
+        # Prepare system and user messages for LLM call
+        system_prompt = "You are an expert financial analyst tasked with generating alternative portfolio weights JSON based on the original portfolio and updated report content. Follow the specified JSON structure and guidelines."
+        user_prompt = prompt
+
+        # Make the API call using o4-mini and standard message format
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=2000
+            model="o4-mini",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
         )
         
         # Extract potential JSON from the response

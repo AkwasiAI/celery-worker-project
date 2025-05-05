@@ -10,6 +10,7 @@ import datetime
 import glob
 from pathlib import Path
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 class FirestoreUploader:
     def __init__(self, database='hedgefundintelligence'):

@@ -7,6 +7,9 @@ import google.api_core.exceptions
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from google.cloud.firestore_v1.base_query import FieldFilter
 
+# Remove emulator host if present to ensure production Firestore
+os.environ.pop('FIRESTORE_EMULATOR_HOST', None)
+
 # Check if Firestore is available
 FIRESTORE_AVAILABLE = False
 try:
@@ -185,8 +188,8 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         6. The tone should be professional, analytical, and balanced
         7. Format in markdown with proper headers, bullet points, and tables
         
-        Previous report excerpt (first 2000 chars):
-        {previous_content[:2000]}
+        Previous report:
+        {previous_content}
         
         Current report (full):
         {report_content}
@@ -197,10 +200,9 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         # Make the API call
         response = await asyncio.to_thread(
             openai_client.chat.completions.create,
-            model="gpt-4-turbo",
+            model="gpt-4.1",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.8,
-            max_tokens=4000
+            temperature=0.3
         )
         
         # Extract the generated content
@@ -258,6 +260,15 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         
         # Generate and upload alternative portfolio weights
         try:
+            # Load investment principles for portfolio weighting
+            principles_path = os.path.join(os.path.dirname(__file__), "orasis_investment_principles.txt")
+            try:
+                with open(principles_path, "r", encoding="utf-8") as f:
+                    investment_principles = f.read().strip()
+            except Exception as e:
+                log_warning(f"Could not load investment principles: {e}")
+                investment_principles = ""
+            # Generate alternative portfolio weights with investment principles
             try:
                 # Try new filter() syntax first
                 weights_query = alt_collection.filter('doc_type', '==', 'portfolio-weights-alternative').filter('is_latest', '==', True)
@@ -310,8 +321,12 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             else:
                 assets, report_date = [], ''
                 
-            # Generate alternative portfolio weights
-            alt_weights_json = await generate_alternative_portfolio_weights(openai_client, assets, alternative_report)
+            alt_weights_json = await generate_alternative_portfolio_weights(
+                openai_client,
+                assets,
+                alternative_report,
+                investment_principles=investment_principles
+            )
             
             # Upload to Firestore
             alt_weights_ref = alt_collection.document()

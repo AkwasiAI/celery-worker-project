@@ -708,7 +708,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         
         # Store news section in report_sections dictionary
         if news_section:
-            report_sections["Latest Market News"] = "## Latest Market News\n" + news_section
+            report_sections["Latest Market News"] = "\n" + news_section
             log_info("Added news update section to report_sections dictionary")
     except Exception as e:
         log_error(f"Error generating news update section: {e}")
@@ -745,10 +745,11 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         
         # Generate portfolio JSON using the full report content as source of truth
         portfolio_json = await generate_portfolio_json(
-            client, 
+            client,
             default_portfolio.get("data", {}).get("assets", []),
             current_date,
             report_content,
+            investment_principles,
             search_client,
             formatted_search_results
         )

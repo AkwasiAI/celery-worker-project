@@ -222,7 +222,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         log_error(f"Error generating JSON data: {e}")
         return json.dumps({"status": "error", "message": str(e)}, indent=2)
 
-async def generate_alternative_portfolio_weights(client, old_assets_list, alt_report_content, search_client=None):
+async def generate_alternative_portfolio_weights(client, old_assets_list, alt_report_content, search_client=None, investment_principles=""):
     """Generate alternative portfolio weights JSON based on old weights and a markdown report.
     
     The alternative report content is treated as the source of truth for asset weights and allocations.
@@ -234,6 +234,7 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         old_assets_list: List of assets from the original portfolio
         alt_report_content: Alternative report content to extract data from
         search_client: Optional search client for additional information
+        investment_principles: Investment principles to apply to asset selection and rationale
         
     Returns:
         str: JSON string with alternative portfolio data
@@ -253,67 +254,45 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         # If direct extraction failed, fall back to generative approach
         log_warning("Direct extraction failed for alternative report, using generative approach")
         
-        # Create a prompt for the alternative portfolio
-        # Include the old assets list for context
+        # Prepare prompt components
         old_assets_json = json.dumps(old_assets_list, indent=2)
-        
-        prompt = f"""
-        Based on the alternative investment portfolio report below, create a new portfolio weights JSON.
-        
-        Here is the original portfolio asset list for context:
-        {old_assets_json}
-        
-        The new JSON should follow this exact structure:
-        {{
-          "data": {{
-            "report_date": "{current_date}",
-            "assets": [
-              {{
-                "name": "Asset Name",
-                "position": "LONG or SHORT",
-                "weight": 0.XX (decimal, not percentage),
-                "target_price": XX.XX (numerical target price),
-                "horizon": "6-12M or 3-6M or 12-18M or 12+",
-                "rationale": "Specific investment rationale",
-                "region": "Region name",
-                "sector": "Sector name"
-              }}
-            ],
-            "portfolio_stats": {{
-              "total_assets": XX (number of assets),
-              "avg_position_size": 0.XX (average position weight),
-              "sector_exposure": {{
-                "Sector1": 0.XX,
-                "Sector2": 0.XX
-              }},
-              "regional_exposure": {{
-                "Region1": 0.XX,
-                "Region2": 0.XX
-              }},
-              "investment_type_breakdown": {{
-                "LONG": 0.XX,
-                "SHORT": 0.XX
-              }}
-            }}
-          }}
-        }}
-        
-        Alternative report content:
-        {alt_report_content[:10000]}  # Limit for token constraints
-        """
-        
-        # Prepare system and user messages for LLM call
-        system_prompt = "You are an expert financial analyst tasked with generating alternative portfolio weights JSON based on the original portfolio and updated report content. Follow the specified JSON structure and guidelines."
-        user_prompt = prompt
+        system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
+Your goal is to identify all assets mentioned in the alternative report and organize them into a structured JSON format.
 
-        # Make the API call using o4-mini and standard message format
+{investment_principles if investment_principles else ""}
+
+Use only the following categories: Shipping Equities/Credit, Commodities, ETFs, Equity Indices, Fixed Income.
+Use only the following regions: North America, Europe, Asia, Latin America, Africa, Oceania. If the region is unclear, assign "Global".
+"""
+        # Gold standard example (same structure as generate_portfolio_json)
+        gold_standard = """{
+  "portfolio": {
+    "date": "2025-05-01",
+    "assets": [
+      {"ticker": "AAPL", "name": "Apple Inc.", "position": "LONG", "weight": 0.08, "target_price": 225.50, "horizon": "12-18M", "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.", "region": "North America", "sector": "Technology"}
+    ],
+    "portfolio_stats": {"total_assets": 15, "avg_position_size": 0.067}
+  }
+}"""
+        user_prompt = f"""Generate a structured JSON object representing the alternative investment portfolio based on the provided report content.
+
+Here is the gold standard example:
+{gold_standard}
+
+Original portfolio asset list:
+{old_assets_json}
+
+Full alternative report content:
+{alt_report_content}
+
+TASK REPEATED: Extract all portfolio assets and statistics from the report content and format them in the specified JSON structure.
+"""
+        # Call LLM with system and user messages
         response = await asyncio.to_thread(
             client.chat.completions.create,
             model="o4-mini",
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
         )
-        
-        # Extract potential JSON from the response
         generated_content = response.choices[0].message.content
         
         # Try to find JSON in the response (may be wrapped in code blocks)

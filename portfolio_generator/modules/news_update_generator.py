@@ -97,7 +97,8 @@ async def generate_news_update_section(client, search_results, categories, inves
     
     # Generate content for each category
     for cat_name, _, _ in processed_categories:
-        cat_md = [f"## {cat_name}\n"]
+        # Initialize category markdown section
+        cat_md = ["\n"]
         
         try:
             # Create a more focused system prompt incorporating investment principles if available

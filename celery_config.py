@@ -42,12 +42,8 @@ celery_app.conf.enable_utc = False  # Use local time
 
 # Standard Celery beat schedule configuration
 celery_app.conf.beat_schedule = {
-    'generate-portfolio-afternoon': {
+    'generate-portfolio-daily': {
         'task': 'generate_investment_portfolio_task',
-        'schedule': crontab(hour=14, minute=30),  # 14:30 Athens time daily (12:30 UK time)
-    },
-    'generate-portfolio-morning': {
-        'task': 'generate_investment_portfolio_task',
-        'schedule': crontab(hour=8, minute=30),   # 08:30 Athens time daily (06:30 UK time)
+        'schedule': crontab(hour=8, minute=0),   # 08:00 Athens time daily
     },
 }

@@ -134,7 +134,12 @@ class FirestoreUploader:
             except AttributeError:
                 # Fall back to older where syntax if filter is not available
                 print("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-                query = self.collection.where('doc_type', '==', doc_type).where('is_latest', '==', True)
+                query = (
+                    self.collection
+                    .where(filter=FieldFilter('doc_type', '==', doc_type))
+                    .where(filter=FieldFilter('is_latest', '==', True))
+                    .order_by('timestamp', direction=firestore.Query.DESCENDING)
+                )
                 results = query.stream()
             
             batch = self.db.batch()

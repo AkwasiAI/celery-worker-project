@@ -1,10 +1,11 @@
 """Firestore upload functionality for portfolio reports."""
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import google.api_core.exceptions
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Check if Firestore is available
 FIRESTORE_AVAILABLE = False
@@ -130,36 +131,35 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             log_warning(f"Current report {current_report_firestore_id} not found in Firestore")
             return None
             
-        # Query for the previous report (the latest report before the current one)
-        # Modified query to avoid requiring composite index
+        # Query for the previous report (the most recent one before the current)
         try:
-            # Try new filter() syntax first
-            query = portfolios_ref.filter('doc_type', '==', 'reports').filter('is_latest', '==', True)
+            # Query two most recent 'reports', ordered by timestamp descending
+            query = (portfolios_ref.filter('doc_type', '==', 'reports')
+                     .order_by('timestamp', direction=firestore.Query.DESCENDING)
+                     .limit(2))
         except AttributeError:
             # Fall back to older where() syntax
             log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-            query = portfolios_ref.where('doc_type', '==', 'reports').where('is_latest', '==', True)
-        
-        # Get all the latest reports and filter in application code to avoid index requirement
+            query = (portfolios_ref.where(filter=FieldFilter('doc_type', '==', 'reports'))
+                     .order_by('timestamp', direction=firestore.Query.DESCENDING)
+                     .limit(2))
+
         latest_reports = list(query.stream())
-        previous_reports = [doc for doc in latest_reports if doc.id != current_report_firestore_id]
-        
-        # Sort the results manually by timestamp (newest first)
-        previous_reports.sort(key=lambda doc: doc.get('timestamp') or 0, reverse=True)
-        
-        # Limit to 1 result
-        if len(previous_reports) > 1:
-            previous_reports = previous_reports[:1]
-        
-        # At this point, previous_reports contains the filtered and sorted results
-        if not previous_reports:
+        log_info(f"Firestore returned {len(latest_reports)} recent 'reports': {[doc.id for doc in latest_reports]}")
+
+        # Pick the most recent report that's not the current one
+        previous_doc = None
+        for doc in latest_reports:
+            if doc.id != current_report_firestore_id:
+                previous_doc = doc
+                break
+        if not previous_doc:
             log_warning("No previous report found to generate alternative report")
             return None
             
-        previous_doc = previous_reports[0]
         previous_data = previous_doc.to_dict()
         previous_content = previous_data.get('content', '')
-        previous_date = previous_data.get('created_at', datetime.utcnow())
+        previous_date = previous_data.get('created_at', datetime.now(timezone.utc))
         
         if not previous_content:
             log_warning("Previous report has no content")
@@ -216,7 +216,11 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         except AttributeError:
             # Fall back to older where() syntax
             log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-            alt_query = alt_collection.where('doc_type', '==', 'report-alternative').where('is_latest', '==', True)
+            alt_query = (
+                alt_collection
+                .where(filter=FieldFilter('doc_type', '==', 'report-alternative'))
+                .where(filter=FieldFilter('is_latest', '==', True))
+            )
         alt_docs = list(alt_query.stream())
         log_info(f"Number of existing report-alternative docs to update: {len(alt_docs)}")
         
@@ -242,7 +246,7 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             'source_report_id': current_report_firestore_id,
             'previous_report_id': previous_doc.id,
             'previous_report_date': previous_date,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.now(timezone.utc)
         }
         
         log_info(f"Uploading alternative report to Firestore")
@@ -260,7 +264,11 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             except AttributeError:
                 # Fall back to older where() syntax
                 log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-                weights_query = alt_collection.where('doc_type', '==', 'portfolio-weights-alternative').where('is_latest', '==', True)
+                weights_query = (
+                    alt_collection
+                    .where(filter=FieldFilter('doc_type', '==', 'portfolio-weights-alternative'))
+                    .where(filter=FieldFilter('is_latest', '==', True))
+                )
             existing_weights = list(weights_query.stream())
             
             if existing_weights:
@@ -277,7 +285,11 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             except AttributeError:
                 # Fall back to older where() syntax
                 log_info("Using older Firestore where() method - consider upgrading google-cloud-firestore")
-                orig_query = reports_ref.where('doc_type', '==', 'portfolio_weights').where('is_latest', '==', True)
+                orig_query = (
+                    reports_ref
+                    .where(filter=FieldFilter('doc_type', '==', 'portfolio_weights'))
+                    .where(filter=FieldFilter('is_latest', '==', True))
+                )
                 
             orig_docs = list(orig_query.stream())
             
@@ -312,7 +324,7 @@ async def generate_and_upload_alternative_report(report_content, current_report_
                 'alternative_weights_id': alt_weights_ref.id,
                 'source_report_id': current_report_firestore_id,
                 'source_weights_id': orig.id if orig_docs else None,
-                'created_at': datetime.utcnow()
+                'created_at': datetime.now(timezone.utc)
             }
             
             log_info("Uploading alternative portfolio weights")

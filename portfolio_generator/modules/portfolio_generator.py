@@ -256,6 +256,7 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         
         # Prepare prompt components
         old_assets_json = json.dumps(old_assets_list, indent=2)
+        # Improved system prompt aligned with generate_portfolio_json
         system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
 Your goal is to identify all assets mentioned in the alternative report and organize them into a structured JSON format.
 
@@ -266,17 +267,99 @@ Use only the following regions: North America, Europe, Asia, Latin America, Afri
 """
         # Gold standard example (same structure as generate_portfolio_json)
         gold_standard = """{
-  "portfolio": {
-    "date": "2025-05-01",
-    "assets": [
-      {"ticker": "AAPL", "name": "Apple Inc.", "position": "LONG", "weight": 0.08, "target_price": 225.50, "horizon": "12-18M", "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.", "region": "North America", "sector": "Technology"}
-    ],
-    "portfolio_stats": {"total_assets": 15, "avg_position_size": 0.067}
-  }
-}"""
-        user_prompt = f"""Generate a structured JSON object representing the alternative investment portfolio based on the provided report content.
+          "portfolio": {
+            "date": "2025-05-01",
+            "assets": [
+              {
+                "ticker": "AAPL",
+                "name": "Apple Inc.",
+                "position": "LONG",
+                "weight": 0.08,
+                "target_price": 225.50,
+                "horizon": "12-18M",
+                "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
+                "region": "North America",
+                "sector": "Technology"
+              },
+              {
+                "ticker": "WMT",
+                "name": "Walmart Inc.",
+                "position": "LONG",
+                "weight": 0.05,
+                "target_price": 82.75,
+                "horizon": "6-12M",
+                "rationale": "Walmart's defensive characteristics and e-commerce growth support our counter-cyclical investment approach during inflationary periods, providing portfolio stability while maintaining growth potential.",
+                "region": "North America",
+                "sector": "Consumer Staples"
+              },
+              {
+                "ticker": "GS",
+                "name": "Goldman Sachs Group Inc.",
+                "position": "SHORT",
+                "weight": 0.03,
+                "target_price": 340.00,
+                "horizon": "3-6M",
+                "rationale": "Increased regulatory pressure and declining investment banking revenues run counter to our principle of targeting businesses with sustainable competitive advantages in growing markets.",
+                "region": "North America",
+                "sector": "Financials"
+              }
+            ],
+            "portfolio_stats": {
+              "total_assets": 15,
+              "avg_position_size": 0.067,
+              "sector_exposure": {
+                "Technology": 0.32,
+                "Healthcare": 0.18,
+                "Consumer Staples": 0.15,
+                "Financials": 0.12,
+                "Energy": 0.10,
+                "Industrials": 0.08,
+                "Materials": 0.05
+              },
+              "regional_exposure": {
+                "North America": 0.65,
+                "Europe": 0.20,
+                "Asia": 0.15
+              },
+              "investment_type_breakdown": {
+                "LONG": 0.85,
+                "SHORT": 0.15
+              }
+            }
+          }
+        }"""
+        
+        # Improved user prompt aligned with generate_portfolio_json
+        user_prompt = f"""Generate a structured JSON object representing the alternative investment portfolio based on the provided alternative report content.
 
-Here is the gold standard example:
+The JSON should follow this format:
+{{
+  "portfolio": {{
+    "date": "{current_date}",
+    "assets": [
+      {{
+        "ticker": "TICKER",
+        "name": "Full asset name",
+        "position": "LONG or SHORT",
+        "weight": 0.XX (decimal, not percentage),
+        "target_price": XX.XX (numerical target price),
+        "horizon": "6-12M or 3-6M or 12-18M or 18M+",
+        "rationale": "Specific investment rationale tied to investment principles",
+        "region": "Region name",
+        "sector": "Sector name"
+      }}
+    ],
+    "portfolio_stats": {{
+      "total_assets": XX (number of assets),
+      "avg_position_size": 0.XX (average position weight),
+      "sector_exposure": {{ "Sector1": 0.XX, "Sector2": 0.XX }},
+      "regional_exposure": {{ "Region1": 0.XX, "Region2": 0.XX }},
+      "investment_type_breakdown": {{ "LONG": 0.XX, "SHORT": 0.XX }}
+    }}
+  }}
+}}
+
+Here is a gold standard example:
 {gold_standard}
 
 Original portfolio asset list:
@@ -285,7 +368,7 @@ Original portfolio asset list:
 Full alternative report content:
 {alt_report_content}
 
-TASK REPEATED: Extract all portfolio assets and statistics from the report content and format them in the specified JSON structure.
+TASK REPEATED: Extract all portfolio assets and statistics from the alternative report content and format them in the specified JSON structure.
 """
         # Call LLM with system and user messages
         response = await asyncio.to_thread(

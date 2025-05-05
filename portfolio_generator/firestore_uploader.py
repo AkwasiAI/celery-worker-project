@@ -109,7 +109,8 @@ class FirestoreUploader:
                 'file_format': file_format,  # 'markdown', 'json', 'text'
                 'filename': os.path.basename(filename),
                 'timestamp': firestore.SERVER_TIMESTAMP,
-                'is_latest': is_latest
+                'is_latest': is_latest,
+                'created_at': firestore.SERVER_TIMESTAMP,
             })
             self.last_uploaded_ids[doc_type] = doc_ref.id  # store for retry logic
             

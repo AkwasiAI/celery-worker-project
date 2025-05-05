@@ -370,3 +370,23 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
 
 **(Begin report generation based on these instructions)**
 '''
+
+PERFORMANCE_ANALYSIS_PROMPT = '''Write a detailed analysis (aim for approximately {per_section_word_count} words) of Performance Analysis as part of an investment portfolio report.
+Include:
+1. Absolute & Relative Performance
+2. Comparison to Prior Allocation
+3. Asset-Class & Sector Attribution
+4. Risk-Adjusted Returns
+5. Performance Across Market Regimes
+6. Factor Attribution (MSCI Barra 8-factor model)
+7. Benchmark Diagnostics
+
+The prior allocation is:
+{old_portfolio_weights}
+
+The current allocation is:
+{current_portfolio_weights}
+
+Format in markdown starting with:
+## Performance Analysis
+'''

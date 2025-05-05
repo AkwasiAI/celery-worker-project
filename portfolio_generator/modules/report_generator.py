@@ -4,14 +4,14 @@ import json
 import asyncio
 import time
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from openai import OpenAI
 
 from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMPT,
     SHIPPING_INDUSTRY_PROMPT, CONCLUSION_OUTLOOK_PROMPT, REFERENCES_SOURCES_PROMPT, 
     RISK_ASSESSMENT_PROMPT, GLOBAL_TRADE_ECONOMY_PROMPT, PORTFOLIO_HOLDINGS_PROMPT,
     ENERGY_MARKETS_PROMPT, COMMODITIES_MARKETS_PROMPT, BENCHMARKING_PERFORMANCE_PROMPT,
-    BASE_SYSTEM_PROMPT)
+    BASE_SYSTEM_PROMPT, PERFORMANCE_ANALYSIS_PROMPT)
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from portfolio_generator.modules.search_utils import format_search_results
 from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
@@ -19,6 +19,10 @@ from portfolio_generator.modules.structured_section_generator import generate_st
 from portfolio_generator.modules.portfolio_generator import generate_portfolio_json
 from portfolio_generator.modules.report_upload import upload_report_to_firestore, generate_and_upload_alternative_report
 from portfolio_generator.web_search import PerplexitySearch
+from google.cloud import firestore
+from portfolio_generator.firestore_downloader import FirestoreDownloader
+from portfolio_generator.firestore_uploader import FirestoreUploader
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 async def generate_investment_portfolio(test_mode=False, dry_run=False, priority_period="month"):
     """Generate a comprehensive investment portfolio report through multiple API calls.
@@ -588,7 +592,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         references_prompt,
         formatted_search_results,
         {},
-        per_section_word_count // 3  # Shorter section
+        per_section_word_count
     )
     
     completed_sections += 1
@@ -599,8 +603,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
 **Date: {current_date}**
 
 """
-    
-
     
     log_info("Report generation complete!")
     
@@ -653,8 +655,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         
         # Generate the news update section
         from portfolio_generator.modules.news_update_generator import generate_news_update_section
-        
-
         
         # Prepare search results in the correct format for the news update generator
         search_results_list = []
@@ -721,9 +721,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         "Energy Markets",
         "Commodities Markets",
         "Shipping Industry",
-        "Portfolio Holdings",
-        "Benchmarking & Performance",
-        "Risk Assessment",
         "Conclusion & Outlook",
         "References & Sources"
     ]
@@ -732,6 +729,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     for section in section_order:
         if section in report_sections:
             report_content += report_sections[section] + "\n\n"
+    
+    portfolio_json = ""
 
     # Generate portfolio JSON
     try:
@@ -776,6 +775,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     except Exception as e:
         log_error(f"Failed to save report to file: {e}")
     
+    
     # Upload to Firestore if available
     try:
         # Import here to avoid circular imports
@@ -811,6 +811,57 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             
     except Exception as e:
         log_error(f"Error during Firestore upload: {e}")
+    
+    # Create and upload Risk & Benchmark report
+    try:
+
+        # 11. Generate Performance analysis section 
+
+        # Fetch from firestore most recent portfolio weights.
+        firestore_downloader = FirestoreDownloader()
+        old_portfolio_weights = firestore_downloader.get_latest("portfolio_weights")
+        
+        performance_prompt = PERFORMANCE_ANALYSIS_PROMPT.format(per_section_word_count=per_section_word_count, old_portfolio_weights=old_portfolio_weights, current_portfolio_weights=portfolio_json)
+
+        report_sections["Performance Analysis"] = await generate_section(
+            client,
+            "Performance Analysis",
+            base_system_prompt,
+            performance_prompt,
+            formatted_search_results,
+            {},
+            per_section_word_count
+        )
+    
+        
+        risk_sections = ["Portfolio Holdings", "Performance Analysis", "Benchmarking & Performance", "Risk Assessment"]
+        risk_content = ""
+        for sec in risk_sections:
+            if sec in report_sections:
+                risk_content += report_sections[sec] + "\n\n"
+        if risk_content:
+            uploader_rb = FirestoreUploader()
+            rb_col = uploader_rb.db.collection("risk_and_benchmark")
+            # Mark existing as not latest
+            try:
+                rb_q = rb_col.filter("doc_type", "==", "risk_and_benchmark").filter("is_latest", "==", True)
+            except AttributeError:
+                rb_q = rb_col.where(filter=FieldFilter("doc_type", "==", "risk_and_benchmark")).where(filter=FieldFilter("is_latest", "==", True))
+            for doc in rb_q.stream():
+                rb_col.document(doc.id).update({"is_latest": False})
+            rb_ref = rb_col.document()
+            rb_ref.set({
+                "content": risk_content,
+                "doc_type": "risk_and_benchmark",
+                "file_format": "markdown",
+                "timestamp": firestore.SERVER_TIMESTAMP,
+                "is_latest": True,
+                "source_report_id": firestore_report_doc_id,
+                "created_at": datetime.now(timezone.utc)
+            })
+            log_success(f"Risk & Benchmark report uploaded with id: {rb_ref.id}")
+    except Exception as e_rb:
+        log_warning(f"Failed to upload Risk & Benchmark report: {e_rb}")
     
     # Return the report content
     return {

@@ -8,7 +8,7 @@ from portfolio_generator.modules.logging import log_info, log_warning, log_error
 from portfolio_generator.modules.data_extraction import extract_portfolio_data_from_sections, infer_region_from_asset
 from portfolio_generator.modules.utils import is_placeholder_rationale
 
-async def generate_portfolio_json(client, assets_list, current_date, report_content, investment_principles="", search_client=None, search_results=None):
+async def generate_portfolio_json(client, assets_list, current_date, report_content, investment_principles="", old_portfolio_weights=None, search_client=None, search_results=None):
     """Generate the structured JSON portfolio data based on report content.
     
     The report content is treated as the source of truth for asset weights and allocations.
@@ -21,6 +21,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         current_date: Current date for the report
         report_content: Full report content to extract data from
         investment_principles: Investment principles to apply to asset selection and rationale
+        old_portfolio_weights: Previous portfolio weights to incorporate for comparisons
         search_client: Optional search client for additional information
         search_results: Optional search results to include
         
@@ -53,7 +54,8 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "horizon": "12-18M",
                 "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
                 "region": "North America",
-                "sector": "Technology"
+                "sector": "Technology",
+                "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
               },
               {
                 "ticker": "WMT",
@@ -64,7 +66,8 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "horizon": "6-12M",
                 "rationale": "Walmart's defensive characteristics and e-commerce growth support our counter-cyclical investment approach during inflationary periods, providing portfolio stability while maintaining growth potential.",
                 "region": "North America",
-                "sector": "Consumer Staples"
+                "sector": "Consumer Staples",
+                "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
               },
               {
                 "ticker": "GS",
@@ -75,7 +78,8 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "horizon": "3-6M",
                 "rationale": "Increased regulatory pressure and declining investment banking revenues run counter to our principle of targeting businesses with sustainable competitive advantages in growing markets.",
                 "region": "North America",
-                "sector": "Financials"
+                "sector": "Financials",
+                "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
               }
             ],
             "portfolio_stats": {
@@ -119,24 +123,16 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "horizon": "6-12M or 3-6M or 12-18M or 18M+",
                 "rationale": "Specific investment rationale tied to investment principles",
                 "region": "Region name",
-                "sector": "Sector name"
+                "sector": "Sector name",
+                "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
               }}
             ],
             "portfolio_stats": {{
               "total_assets": XX (number of assets),
               "avg_position_size": 0.XX (average position weight),
-              "sector_exposure": {{
-                "Sector1": 0.XX,
-                "Sector2": 0.XX
-              }},
-              "regional_exposure": {{
-                "Region1": 0.XX,
-                "Region2": 0.XX
-              }},
-              "investment_type_breakdown": {{
-                "LONG": 0.XX,
-                "SHORT": 0.XX
-              }}
+              "sector_exposure": {{ "Sector1": 0.XX, "Sector2": 0.XX }},
+              "regional_exposure": {{ "Region1": 0.XX, "Region2": 0.XX }},
+              "investment_type_breakdown": {{ "LONG": 0.XX, "SHORT": 0.XX }}
             }}
           }}
         }}
@@ -146,6 +142,11 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         
         Report content:
         {report_content}
+        
+        Prior portfolio weights:
+        {old_portfolio_weights}
+        
+        Include an "isNew" boolean for each asset: set to true if the asset ticker was not in the prior portfolio weights, otherwise false.
         
         TASK REPEATED: Extract all portfolio assets and statistics from the report content and format them in the specified JSON structure.
         
@@ -256,16 +257,16 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         
         # Prepare prompt components
         old_assets_json = json.dumps(old_assets_list, indent=2)
-        # Improved system prompt aligned with generate_portfolio_json
         system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
 Your goal is to identify all assets mentioned in the alternative report and organize them into a structured JSON format.
 
+Here are the Orasis investment principles to guide your rationales:
 {investment_principles if investment_principles else ""}
 
+When explaining asset rationales, reference these principles explicitly and avoid vague statements like "Investment aligned with market outlook".
 Use only the following categories: Shipping Equities/Credit, Commodities, ETFs, Equity Indices, Fixed Income.
 Use only the following regions: North America, Europe, Asia, Latin America, Africa, Oceania. If the region is unclear, assign "Global".
 """
-        # Gold standard example (same structure as generate_portfolio_json)
         gold_standard = """{
           "portfolio": {
             "date": "2025-05-01",
@@ -329,7 +330,6 @@ Use only the following regions: North America, Europe, Asia, Latin America, Afri
           }
         }"""
         
-        # Improved user prompt aligned with generate_portfolio_json
         user_prompt = f"""Generate a structured JSON object representing the alternative investment portfolio based on the provided alternative report content.
 
 The JSON should follow this format:
@@ -367,6 +367,8 @@ Original portfolio asset list:
 
 Full alternative report content:
 {alt_report_content}
+
+Emphasis: Provide specific, principle-based rationales explicitly tied to the Orasis investment principles; avoid generic statements like "Investment aligned with market outlook".
 
 TASK REPEATED: Extract all portfolio assets and statistics from the alternative report content and format them in the specified JSON structure.
 """

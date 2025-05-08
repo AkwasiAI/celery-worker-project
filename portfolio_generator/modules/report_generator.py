@@ -791,6 +791,11 @@ forward-looking expectations for energy, shipping, and commodity markets."""
                 "assets": []
             }
         }
+
+        firebase_downloader = FirestoreDownloader()
+        old_portfolio_weights = firebase_downloader.get_latest("portfolio_weights")
+        
+        log_info(f"Old portfolio weights: {old_portfolio_weights}")
         # Generate portfolio JSON using the full report content as source of truth
         portfolio_json = await generate_portfolio_json(
             client,
@@ -798,6 +803,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             current_date,
             report_content,
             investment_principles,
+            old_portfolio_weights,
             search_client,
             formatted_search_results
         )
@@ -844,7 +850,13 @@ forward-looking expectations for energy, shipping, and commodity markets."""
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
                     
                     # Generate and upload alternative report for ePubs
-                    await generate_and_upload_alternative_report(report_content, firestore_report_doc_id, client)
+                    await generate_and_upload_alternative_report(
+                        report_content,
+                        firestore_report_doc_id,
+                        client,
+                        investment_principles=investment_principles,
+                        search_results=formatted_search_results
+                    )
                     
                     log_success("Report generation completed successfully!")
                 except Exception as e:

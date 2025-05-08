@@ -91,12 +91,14 @@ async def upload_report_to_firestore(report_content, portfolio_json, doc_id=None
         log_error(f"Error uploading to Firestore: {e}")
         return None
 
-async def generate_and_upload_alternative_report(report_content, current_report_firestore_id, openai_client=None):
+async def generate_and_upload_alternative_report(report_content, current_report_firestore_id, openai_client=None, investment_principles=None, search_results=None):
     """
     Generate and upload an alternative report to Firestore, benchmarking the current report against the previous report.
     - report_content: The newly generated report content (markdown string)
     - current_report_firestore_id: The Firestore docId of the just-uploaded report
     - openai_client: Optional OpenAI client (if not provided, will create one)
+    - investment_principles: Optional investment principles text to include in the alternative report prompt
+    - search_results: Optional search results text to include in the alternative report prompt
     """
     if not FIRESTORE_AVAILABLE:
         log_warning("Alternative report generation requested but Firestore is not available")
@@ -170,6 +172,13 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             
         # Generate the alternative report
         log_info("Generating alternative report using OpenAI...")
+        # Prepare optional context
+        investment_principles_section = ""
+        if investment_principles and investment_principles.strip():
+            investment_principles_section = f"===== Investment Principles =====\n{investment_principles}\n\n"
+        search_results_section = ""
+        if search_results and search_results.strip():
+            search_results_section = f"===== Search Results =====\n{search_results}\n\n"
         
         prompt = f"""
         You are a world-class investment analyst. You have been given two versions of an investment portfolio report:
@@ -188,7 +197,7 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         6. The tone should be professional, analytical, and balanced
         7. Format in markdown with proper headers, bullet points, and tables
         
-        Previous report:
+        {investment_principles_section}{search_results_section}        Previous report:
         {previous_content}
         
         Current report (full):
@@ -200,9 +209,8 @@ async def generate_and_upload_alternative_report(report_content, current_report_
         # Make the API call
         response = await asyncio.to_thread(
             openai_client.chat.completions.create,
-            model="gpt-4.1",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            model="o4-mini",
+            messages=[{"role": "user", "content": prompt}]
         )
         
         # Extract the generated content
@@ -269,6 +277,8 @@ async def generate_and_upload_alternative_report(report_content, current_report_
                 log_warning(f"Could not load investment principles: {e}")
                 investment_principles = ""
             # Generate alternative portfolio weights with investment principles
+
+            log_info(f" Investment principles to be used for alternative portfolio weights : {investment_principles} ")
             try:
                 # Try new filter() syntax first
                 weights_query = alt_collection.filter('doc_type', '==', 'portfolio-weights-alternative').filter('is_latest', '==', True)

@@ -109,7 +109,7 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         log_info(f"Error generating {section_name}: {str(e)}")
         return f"Error generating {section_name}: {str(e)}"
 
-async def generate_section_with_web_search(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000):
+async def generate_section_with_web_search(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000, investment_principles=None):
     """Generate a section of the investment portfolio report using GPT-4.1 with web search capability.
     
     Args:
@@ -120,6 +120,7 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
         search_results: Optional existing search results (not used if web search is enabled)
         previous_sections: Optional previous sections to provide context
         target_word_count: Target word count for the section
+        investment_principles: Optional investment principles to include in the prompt
         
     Returns:
         str: The generated section content
@@ -133,12 +134,19 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
         # Use a consistent template structure with placeholders for dynamic content
         prompt_template = """# {section_name}
 
+===== System Prompt =====
 {system_prompt}
 
+===== Investment Principles =====
+{investment_principles_content}
+
+===== User Prompt =====
 {user_prompt}
 
+===== Word Count Instruction =====
 {word_count_instruction}
 
+===== Previous Sections =====
 {previous_sections_content}
 
 ===== IMPORTANT: REVIEW AND FOLLOW THESE CORE INSTRUCTIONS =====
@@ -165,10 +173,16 @@ The following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instruc
             # Log warning if previous_sections is provided but not a dictionary
             log_warning(f"previous_sections parameter for {section_name} is not a dictionary: {type(previous_sections)}")
         
+        # Include investment principles if provided
+        investment_principles_content = ""
+        if investment_principles and investment_principles.strip():
+            investment_principles_content = "Investment principles:\n" + investment_principles
+        
         # 3. Fill the template with actual content
         full_prompt = prompt_template.format(
             section_name=section_name,
             system_prompt=system_prompt,
+            investment_principles_content=investment_principles_content,
             user_prompt=user_prompt,
             word_count_instruction=word_count_instruction,
             previous_sections_content=previous_sections_content

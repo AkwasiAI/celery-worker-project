@@ -243,18 +243,6 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
     try:
         current_date = datetime.now().strftime("%Y-%m-%d")
         
-        # First attempt direct extraction
-        extracted_data = extract_portfolio_data_from_sections({}, current_date, alt_report_content)
-        
-        # If extraction found assets, use that data
-        if extracted_data.get("data", {}).get("assets") and len(extracted_data["data"]["assets"]) > 0:
-            log_info(f"Successfully extracted {len(extracted_data['data']['assets'])} assets from alternative report")
-            portfolio_json = json.dumps(extracted_data, indent=2)
-            return portfolio_json
-        
-        # If direct extraction failed, fall back to generative approach
-        log_warning("Direct extraction failed for alternative report, using generative approach")
-        
         # Prepare prompt components
         old_assets_json = json.dumps(old_assets_list, indent=2)
         system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
@@ -402,6 +390,13 @@ TASK REPEATED: Extract all portfolio assets and statistics from the alternative 
                 return json.dumps(portfolio_data, indent=2)
             except json.JSONDecodeError:
                 log_error("Could not extract valid JSON from response")
+        
+        # Direct extraction fallback
+        log_info("Falling back to direct extraction for alternative report")
+        extracted_data = extract_portfolio_data_from_sections({}, current_date, alt_report_content)
+        if extracted_data.get("data", {}).get("assets"):
+            log_info(f"Successfully extracted {len(extracted_data['data']['assets'])} assets via extraction fallback")
+            return json.dumps(extracted_data, indent=2)
         
         # If everything else failed, create a minimally modified version of the original
         fallback_data = {

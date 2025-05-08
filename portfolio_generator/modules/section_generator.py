@@ -140,6 +140,9 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
 ===== Investment Principles =====
 {investment_principles_content}
 
+===== Search Results =====
+{search_results_content}
+
 ===== User Prompt =====
 {user_prompt}
 
@@ -177,12 +180,18 @@ The following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instruc
         investment_principles_content = ""
         if investment_principles and investment_principles.strip():
             investment_principles_content = "Investment principles:\n" + investment_principles
-        
+
+        # Prepare search results content
+        search_results_content = ""
+        if search_results and search_results.strip():
+            search_results_content = "Here is the latest information from web searches:\n\n" + search_results
+
         # 3. Fill the template with actual content
         full_prompt = prompt_template.format(
             section_name=section_name,
             system_prompt=system_prompt,
             investment_principles_content=investment_principles_content,
+            search_results_content=search_results_content,
             user_prompt=user_prompt,
             word_count_instruction=word_count_instruction,
             previous_sections_content=previous_sections_content

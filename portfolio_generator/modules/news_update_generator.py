@@ -137,10 +137,22 @@ DATA:
 
 TASK REPEATED:
 From the above market research data, extract 3-5 key headlines relevant to '{cat_name}'. 
+
+For each '{cat_name}' ensure that it has the Markdown heading(##). 
+
 For each headline:
 1. Present it as a Markdown subheading (###)
 2. Follow with a ~50-word explanation of how it relates to our investment principles
 3. Focus on investment implications, opportunities, or risks
+
+==========
+Repeat of Format Example: 
+
+## Shipping
+
+### Shanghai ports close due to COVID
+- This supply chain disruption creates potential investment opportunities in logistics alternatives and companies with robust distribution networks. Our principle of seeking discounted assets in temporary distress applies here, as affected shipping companies may become undervalued.
+==========
 
 If you cannot find sufficient relevant information about '{cat_name}' in the data, respond with: 
 "*No recent news available for {cat_name}. This section will be updated in the next report.*"

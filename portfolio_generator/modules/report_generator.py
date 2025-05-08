@@ -266,8 +266,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     # Initialize storage for generated sections
     report_sections = {}
     
-    # Define the current date
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    # Define the current timestamp (date and time)
+    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Define base system prompt using the imported prompt
     current_year = datetime.now().year

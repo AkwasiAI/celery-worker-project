@@ -359,6 +359,8 @@ Full alternative report content:
 Emphasis: Provide specific, principle-based rationales explicitly tied to the Orasis investment principles; avoid generic statements like "Investment aligned with market outlook".
 
 TASK REPEATED: Extract all portfolio assets and statistics from the alternative report content and format them in the specified JSON structure.
+
+IMPORTANT: Ensure 'investment_type_breakdown' values sum to 1.0 (LONG + SHORT = 1.0).
 """
         # Call LLM with system and user messages
         response = await asyncio.to_thread(

@@ -2,7 +2,7 @@
 import asyncio
 from portfolio_generator.modules.logging import log_info, log_warning, log_error
 
-async def generate_section(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000):
+async def generate_section(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000, investment_principles=None):
     """Generate a section of the investment portfolio report.
     
     Args:
@@ -13,6 +13,7 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         search_results: Optional search results to include in the prompt
         previous_sections: Optional previous sections to provide context
         target_word_count: Target word count for the section
+        investment_principles: Optional investment principles to include in the prompt
         
     Returns:
         str: The generated section content
@@ -36,10 +37,16 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         # Create a template for dynamic content with placeholders
         # This helps maintain consistent structure even when content varies
         dynamic_content_template = """
+===== Word Count Instruction =====
 {word_count_instruction}
 
+===== Investment Principles =====
+{investment_principles_content}
+
+===== Search Results =====
 {search_results_content}
 
+===== Previous Sections =====
 {previous_sections_content}
 """
         
@@ -47,6 +54,11 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         word_count_instruction = ""
         if target_word_count:
             word_count_instruction = f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
+        
+        # Include investment principles in the prompt if provided
+        investment_principles_content = ""
+        if investment_principles and investment_principles.strip():
+            investment_principles_content = "Investment principles:\n" + investment_principles
         
         # Prepare search results section (dynamic)
         search_results_content = ""
@@ -64,6 +76,7 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         # Fill in the template with actual content
         dynamic_content = dynamic_content_template.format(
             word_count_instruction=word_count_instruction,
+            investment_principles_content=investment_principles_content,
             search_results_content=search_results_content,
             previous_sections_content=previous_sections_content
         )

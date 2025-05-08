@@ -11,7 +11,7 @@ from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMP
     SHIPPING_INDUSTRY_PROMPT, CONCLUSION_OUTLOOK_PROMPT, REFERENCES_SOURCES_PROMPT, 
     RISK_ASSESSMENT_PROMPT, GLOBAL_TRADE_ECONOMY_PROMPT, PORTFOLIO_HOLDINGS_PROMPT,
     ENERGY_MARKETS_PROMPT, COMMODITIES_MARKETS_PROMPT, BENCHMARKING_PERFORMANCE_PROMPT,
-    BASE_SYSTEM_PROMPT, PERFORMANCE_ANALYSIS_PROMPT)
+    BASE_SYSTEM_PROMPT, PERFORMANCE_ANALYSIS_PROMPT, ALLOCATION_CHANGES_PROMPT, INSIGHTS_CHANGES_PROMPT)
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from portfolio_generator.modules.search_utils import format_search_results
 from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
@@ -140,7 +140,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                 # Get investment principles from file
                 investment_principles = ""
                 try:
-                    with open(os.path.join(os.path.dirname(__file__), "orasis_investment_principles.txt"), "r", encoding="utf-8") as f:
+                    with open(os.path.join(os.path.dirname(__file__), "orasis_investment_principles.txt"), "r") as f:
                         investment_principles = f.read()
                     log_info("Successfully loaded investment principles.")
                 except Exception as e:
@@ -290,7 +290,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     )
     
     # Initialize section tracking variables
-    total_sections = 10  # Total number of sections in the report
+    total_sections = 12  # Total number of sections in the report
     completed_sections = 0
     
     # Generate Executive Summary using the structured generator with Pydantic validation
@@ -397,7 +397,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             user_prompt=enhanced_exec_summary_prompt,
             search_results=formatted_search_results,
             previous_sections={},
-            target_word_count=per_section_word_count
+            target_word_count=per_section_word_count,
+            investment_principles=investment_principles
         )
         
         # Parse portfolio from executive summary using the original approach
@@ -463,7 +464,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         global_economy_prompt,
         formatted_search_results,
         {"Executive Summary": report_sections["Executive Summary"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -479,7 +481,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         energy_markets_prompt,
         formatted_search_results,
         {"Executive Summary": report_sections["Executive Summary"], "Global Trade & Economy": report_sections["Global Trade & Economy"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -495,7 +498,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         commodities_prompt,
         formatted_search_results,
         {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -511,7 +515,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         shipping_prompt,
         formatted_search_results,
         {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -528,7 +533,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         user_prompt=portfolio_prompt,
         search_results=formatted_search_results,
         previous_sections={k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry"]},
-        target_word_count=per_section_word_count
+        target_word_count=per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -544,7 +550,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         benchmarking_prompt,
         formatted_search_results,
         {k: report_sections[k] for k in ["Executive Summary", "Portfolio Holdings"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -560,7 +567,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         risk_prompt,
         formatted_search_results,
         {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Portfolio Holdings"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -576,7 +584,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         conclusion_prompt,
         formatted_search_results,
         {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment"]},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
@@ -592,11 +601,50 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         references_prompt,
         formatted_search_results,
         {},
-        per_section_word_count
+        per_section_word_count,
+        investment_principles=investment_principles
     )
     
     completed_sections += 1
     log_info(f"Completed section {completed_sections}/{total_sections}: References & Sources")
+
+    # 11. Generate Allocation section
+    # Load previous allocation weights from Firestore
+    prev_allocation_weights = FirestoreDownloader().get_latest("portfolio_weights")
+    allocation_prompt = ALLOCATION_CHANGES_PROMPT.format(
+        old_portfolio_weights=prev_allocation_weights,
+        current_portfolio_weights=portfolio_json
+    )
+    report_sections["Allocation"] = await generate_section(
+        client,
+        "Allocation",
+        base_system_prompt,
+        allocation_prompt,
+        formatted_search_results,
+        {},
+        target_word_count=50,
+        investment_principles=investment_principles
+    )
+    completed_sections += 1
+    log_info(f"Completed section {completed_sections}/{total_sections}: Allocation")
+
+    # 12. Generate Insights section
+    insights_prompt = INSIGHTS_CHANGES_PROMPT.format(
+        old_portfolio_weights=prev_allocation_weights,
+        current_portfolio_weights=portfolio_json
+    )
+    report_sections["Insights"] = await generate_section(
+        client,
+        "Insights",
+        base_system_prompt,
+        insights_prompt,
+        formatted_search_results,
+        {},
+        target_word_count=50,
+        investment_principles=investment_principles
+    )
+    completed_sections += 1
+    log_info(f"Completed section {completed_sections}/{total_sections}: Insights")
     
     # Combine all sections into a single report
     report_content = f"""# Investment Portfolio Report
@@ -716,6 +764,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # Define the section order
     section_order = [
         "Latest Market News",
+        "Allocation",
+        "Insights",
         "Executive Summary",
         "Global Trade & Economy",
         "Energy Markets",
@@ -741,7 +791,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
                 "assets": []
             }
         }
-        
         # Generate portfolio JSON using the full report content as source of truth
         portfolio_json = await generate_portfolio_json(
             client,
@@ -830,7 +879,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             performance_prompt,
             formatted_search_results,
             {},
-            per_section_word_count
+            per_section_word_count,
+            investment_principles=investment_principles
         )
     
         

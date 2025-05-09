@@ -194,6 +194,24 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 return json.dumps(portfolio_data, indent=2)
             except json.JSONDecodeError:
                 log_error("Could not extract valid JSON from response")
+                log_info(f"Original LLM content: {generated_content}")
+                log_info("Attempting LLM fallback for better rationale responses")
+                fallback_response = await asyncio.to_thread(
+                    client.chat.completions.create,
+                    model="o4-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"The previous response did not parse as JSON:\n{generated_content}\nPlease regenerate a valid JSON portfolio following the original specification, with clear, principle-based rationales."}
+                    ]
+                )
+                fallback_content = fallback_response.choices[0].message.content
+                log_info(f"LLM fallback response: {fallback_content}")
+                try:
+                    fallback_data_json = json.loads(fallback_content)
+                    log_info("Successfully generated portfolio JSON data on fallback")
+                    return json.dumps(fallback_data_json, indent=2)
+                except json.JSONDecodeError:
+                    log_error("Fallback LLM response contains invalid JSON")
         
         # Fallback: direct extraction after AI methods
         log_info("Falling back to direct extraction for portfolio JSON generation")

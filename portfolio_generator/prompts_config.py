@@ -416,3 +416,32 @@ The current allocation is:
 Format in markdown starting with:
 ## Insights
 '''
+
+BENCHMARK_CALCULATIONS_PROMPT = '''Respond with only the JSON object containing the following benchmarking metrics for the given portfolio weights. Do not include any code fences, markdown formatting, or extra text.
+
+Generate a JSON object with this structure:
+{
+  "daily_return": 0.XX,
+  "month_to_date_return": 0.XX,
+  "year_to_date_return": 0.XX,
+  "sharpe_ratio": 0.XX,
+  "annualised_std": 0.XX,
+  "correlation": {
+    "S&P 500": 0.XX,
+    "MSCI": 0.XX
+  }
+}
+
+Use up-to-date market data from web searches. Include current date placeholder: {current_date}.
+'''
+
+BENCHMARK_ALTERNATIVE_PROMPT = '''Generate a JSON object containing the same benchmarking metrics for the given alternative portfolio weights:
+- Return - Daily
+- Return - Month-to-Date
+- Return - Year-to-Date
+- Sharpe Ratio assuming a risk-free rate of 3%
+- Annualized standard deviation
+- Correlation against S&P 500 and MSCI
+
+Use the provided alternative portfolio JSON as input: {alternative_portfolio_json}. Include current date placeholder: {current_date}. Use up-to-date market data from web searches. Return output strictly as JSON with the same structure as above.
+'''

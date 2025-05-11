@@ -751,7 +751,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             search_results=formatted_search_results,
             investment_principles=investment_principles,
             categories=new_categories_akwasi,
-            model="o4-mini"  # Use Claude's o4-mini model
+            model="o4-mini" 
         )
         
         # Store news section in report_sections dictionary
@@ -809,7 +809,38 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         )
         
         log_info("Generated portfolio weights JSON")
-        
+
+        # method to calculate benchmark metrics using portfolio_json
+        from portfolio_generator.modules.benchmark_metrics import calculate_benchmark_metrics
+        calculated_metrics_json = await calculate_benchmark_metrics(
+            client,
+            portfolio_json,
+            current_date
+        )
+        log_info(f"Calculated benchmark metrics: {calculated_metrics_json}")
+
+        # upload calculated metrics to firestore under a new collection called "benchmark_metrics"
+        from portfolio_generator.modules.report_upload import FirestoreUploader
+        uploader_bm = FirestoreUploader()
+        bm_col = uploader_bm.db.collection("benchmark_metrics")
+        # Mark previous benchmark_metrics docs as not latest
+        try:
+            bm_q = bm_col.filter("doc_type", "==", "benchmark_metrics").filter("is_latest", "==", True)
+        except AttributeError:
+            bm_q = bm_col.where(filter=FieldFilter("doc_type", "==", "benchmark_metrics")).where(filter=FieldFilter("is_latest", "==", True))
+        for doc in bm_q.stream():
+            bm_col.document(doc.id).update({"is_latest": False})
+        bm_ref = bm_col.document()
+        bm_ref.set({
+            "metrics_json": calculated_metrics_json,
+            "doc_type": "benchmark_metrics",
+            "file_format": "json",
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "is_latest": True,
+            "source_report_id": firestore_report_doc_id,
+            "created_at": datetime.now(timezone.utc)
+        })
+        log_success(f"Benchmark metrics uploaded with id: {bm_ref.id}")
     except Exception as e:
         log_error(f"Error generating portfolio JSON: {e}")
         portfolio_json = json.dumps(default_portfolio)

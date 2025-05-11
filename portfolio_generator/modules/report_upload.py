@@ -100,6 +100,8 @@ async def generate_and_upload_alternative_report(report_content, current_report_
     - investment_principles: Optional investment principles text to include in the alternative report prompt
     - search_results: Optional search results text to include in the alternative report prompt
     """
+    # local import ensures FirestoreUploader is available inside this function
+    from portfolio_generator.firestore_uploader import FirestoreUploader
     if not FIRESTORE_AVAILABLE:
         log_warning("Alternative report generation requested but Firestore is not available")
         return None
@@ -233,7 +235,7 @@ async def generate_and_upload_alternative_report(report_content, current_report_
             )
         alt_docs = list(alt_query.stream())
         log_info(f"Number of existing report-alternative docs to update: {len(alt_docs)}")
-        
+
         if not alt_docs:
             log_info("No existing 'report-alternative' documents found to update.")
         else:
@@ -337,6 +339,38 @@ async def generate_and_upload_alternative_report(report_content, current_report_
                 alternative_report,
                 investment_principles=investment_principles
             )
+
+            current_date = datetime.now(timezone.utc)
+            # method to calculate benchmark metrics using portfolio_json
+            from portfolio_generator.modules.benchmark_metrics import calculate_benchmark_metrics
+            calculated_metrics_json = await calculate_benchmark_metrics(
+                openai_client,
+                alt_weights_json,
+                current_date
+            )
+            log_info(f"Calculated alternative benchmark metrics: {calculated_metrics_json}")
+
+            # upload calculated metrics to firestore under a new collection called "benchmark_metrics-alternative"
+            uploader_bm = FirestoreUploader()
+            bm_col = uploader_bm.db.collection("benchmark_metrics-alternative")
+            # Mark previous benchmark_metrics-alternative docs as not latest
+            try:
+                bm_q = bm_col.filter("doc_type", "==", "benchmark_metrics-alternative").filter("is_latest", "==", True)
+            except AttributeError:
+                bm_q = bm_col.where(filter=FieldFilter("doc_type", "==", "benchmark_metrics-alternative")).where(filter=FieldFilter("is_latest", "==", True))
+            for doc in bm_q.stream():
+                bm_col.document(doc.id).update({"is_latest": False})
+            bm_ref = bm_col.document()
+            bm_ref.set({
+                "metrics_json": calculated_metrics_json,
+                "doc_type": "benchmark_metrics-alternative",
+                "file_format": "json",
+                "timestamp": firestore.SERVER_TIMESTAMP,
+                "is_latest": True,
+                "source_report_id": current_report_firestore_id,
+                "created_at": datetime.now(timezone.utc)
+            })
+            log_success(f"Alternative benchmark metrics uploaded with id: {bm_ref.id}")
             
             # Upload to Firestore
             alt_weights_ref = alt_collection.document()

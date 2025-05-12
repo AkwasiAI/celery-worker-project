@@ -3,7 +3,7 @@ import os
 import json
 import asyncio
 from typing import Dict, List, Optional, Union, Literal, Tuple
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 import re
 from openai import OpenAI
@@ -18,14 +18,14 @@ class PortfolioPosition(BaseModel):
     time_horizon: str = Field(..., description="Investment time horizon (e.g., '3-6 months', '1-2 years')")
     confidence_level: Literal["High", "Medium", "Low"] = Field(..., description="Confidence level in the position")
     
-    @validator('allocation_percent')
+    @field_validator('allocation_percent')
     def check_allocation(cls, v):
         """Validate allocation percentage is between 0 and 100."""
         if v < 0 or v > 100:
             raise ValueError(f'allocation_percent must be between 0 and 100, got {v}')
         return v
     
-    @validator('asset')
+    @field_validator('asset')
     def check_asset(cls, v):
         """Validate asset ticker is not empty."""
         if not v or not v.strip():

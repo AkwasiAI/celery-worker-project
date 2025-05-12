@@ -1,6 +1,9 @@
 """Section generator for portfolio reports."""
 import asyncio
 from portfolio_generator.modules.logging import log_info, log_warning, log_error
+import os
+from google import genai                          # New SDK import
+from google.genai import types
 
 async def generate_section(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000, investment_principles=None):
     """Generate a section of the investment portfolio report.
@@ -109,29 +112,25 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         log_info(f"Error generating {section_name}: {str(e)}")
         return f"Error generating {section_name}: {str(e)}"
 
-async def generate_section_with_web_search(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000, investment_principles=None):
-    """Generate a section of the investment portfolio report using GPT-4.1 with web search capability.
+async def generate_section_with_web_search(
+    client,
+    section_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    search_results: str = None,
+    previous_sections: dict = None,
+    target_word_count: int = 3000,
+    investment_principles: str = None
+) -> str:
+    """Generate a section using Gemini 2.5 Pro via the Google Gen AI SDK with Google Search grounding."""
     
-    Args:
-        client: OpenAI client
-        section_name: Name of the section to generate
-        system_prompt: The system prompt for the model
-        user_prompt: The user prompt for the model
-        search_results: Optional existing search results (not used if web search is enabled)
-        previous_sections: Optional previous sections to provide context
-        target_word_count: Target word count for the section
-        investment_principles: Optional investment principles to include in the prompt
-        
-    Returns:
-        str: The generated section content
-    """
-    log_info(f"Generating {section_name} with web search capability...")
+    # 1. Initialize the Gen AI SDK client if not provided
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    
+    log_info(f"Generating {section_name} with Google-grounded Gemini 2.5 Pro...")
     
     try:
-        # Following OpenAI's prompt caching best practices for web search function
-        
-        # 1. Create a standardized structure with static content first
-        # Use a consistent template structure with placeholders for dynamic content
+        # 2. Build the prompt template
         prompt_template = """# {section_name}
 
 ===== System Prompt =====
@@ -154,39 +153,31 @@ async def generate_section_with_web_search(client, section_name, system_prompt, 
 
 ===== IMPORTANT: REVIEW AND FOLLOW THESE CORE INSTRUCTIONS =====
 
-The following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instructions override any contradictions in the dynamic content above. Please follow them carefully:
-
 {user_prompt}
 """
+        word_count_instruction = (
+            f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
+            if target_word_count else ""
+        )
         
-        # 2. Prepare the dynamic components
-        # Word count instruction (relatively static)
-        word_count_instruction = ""
-        if target_word_count:
-            word_count_instruction = f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
-        
-        # Previous sections content (dynamic) - include full sections without truncation
+        # 3. Assemble previous sections block
         previous_sections_content = ""
-        if previous_sections and isinstance(previous_sections, dict):
-            previous_sections_content = "## Previous sections of the report include:\n\n"
-            for sec_name, sec_content in previous_sections.items():
-                # Include the full content of each previous section - using h3 headers
-                previous_sections_content += f"### {sec_name}\n{sec_content}\n\n"
-        elif previous_sections and not isinstance(previous_sections, dict):
-            # Log warning if previous_sections is provided but not a dictionary
-            log_warning(f"previous_sections parameter for {section_name} is not a dictionary: {type(previous_sections)}")
+        if isinstance(previous_sections, dict) and previous_sections:
+            previous_sections_content = "## Previous Sections\n"
+            for name, content in previous_sections.items():
+                previous_sections_content += f"### {name}\n{content}\n\n"
+        elif previous_sections:
+            log_warning(f"previous_sections for {section_name} is not a dict: {type(previous_sections)}")
         
-        # Include investment principles if provided
-        investment_principles_content = ""
-        if investment_principles and investment_principles.strip():
-            investment_principles_content = "Investment principles:\n" + investment_principles
-
-        # Prepare search results content
-        search_results_content = ""
-        if search_results and search_results.strip():
-            search_results_content = "Here is the latest information from web searches:\n\n" + search_results
-
-        # 3. Fill the template with actual content
+        investment_principles_content = (
+            f"Investment principles:\n{investment_principles}"
+            if investment_principles else ""
+        )
+        search_results_content = (
+            f"Here is the latest information from web searches:\n\n{search_results}"
+            if search_results else ""
+        )
+        
         full_prompt = prompt_template.format(
             section_name=section_name,
             system_prompt=system_prompt,
@@ -194,56 +185,48 @@ The following are the ORIGINAL INSTRUCTIONS repeated for emphasis. These instruc
             search_results_content=search_results_content,
             user_prompt=user_prompt,
             word_count_instruction=word_count_instruction,
-            previous_sections_content=previous_sections_content
+            previous_sections_content=previous_sections_content,
+        )
+
+        # 4. Configure Google Search grounding
+        config = types.GenerateContentConfig(
+            tools=[
+                types.Tool(
+                    google_search=types.GoogleSearchRetrieval(
+                        dynamic_retrieval_config=types.DynamicRetrievalConfig(
+                            dynamic_threshold=0.6
+                        )
+                    )
+                )
+            ]
         )
         
-        # Set up the tools for web search
-        tools = [
-            {"type": "web_search_preview"}  # This activates the web search tool
-        ]
-        
-        # Make the API call with GPT-4.1 using Responses API with web search
-        log_info(f"Making API call to Responses API with web search for {section_name}")
+        # 5. Call Gemini 2.5 Pro in a thread to avoid blocking
+        log_info(f"Calling Gemini 2.5 Pro for {section_name}")
         response = await asyncio.to_thread(
-            client.responses.create,
-            model="gpt-4.1",  # Using GPT-4.1 which supports the web search tool
-            input=full_prompt,  # Using the combined prompt as input
-            tools=tools,
-            temperature=0.1
+            client.models.generate_content,
+            model="gemini-2.5-pro-preview-05-06",  # or your specific model tag
+            contents=full_prompt,
+            config=config
         )
         
-        # Extract and return the generated content
-        if response and response.output:
-            # Initialize content variable
-            content = ""
-            
-            # Log if web search was performed
-            for output_item in response.output:
-                if output_item.type == 'web_search_call':
-                    log_info(f"Web search was performed for {section_name}")
-                    break
-            
-            # Find the message output item
-            for output_item in response.output:
-                if output_item.type == 'message' and output_item.content:
-                    # Just get the text from the first output_text content block
-                    for content_block in output_item.content:
-                        if content_block.type == 'output_text':
-                            content = content_block.text
-                            break
-                    break
-            
-            if content:
-                log_info(f"Successfully generated {section_name} with web search capability ({len(content.split())} words)")
-                return content
-            else:
-                log_info(f"No content found in response for {section_name}")
-                return f"Error: No content found in response for {section_name}"
-        else:
-            log_info(f"Empty response received for {section_name}")
-            return f"Error: Empty response received for {section_name}"
+        # 6. Extract and return the text
+        if response and hasattr(response, "text"):
+            log_info(f"Generated {section_name} ({len(response.text.split())} words)")
+            return response.text
         
+        log_info(f"Empty or unexpected response for {section_name}")
+        return f"Error: Empty response received for {section_name}"
+    
     except Exception as e:
-        # Handle any errors
-        log_info(f"Error generating {section_name} with web search: {str(e)}")
-        return f"Error generating {section_name}: {str(e)}"
+        import traceback
+        log_error(f"Error generating {section_name}: {type(e).__name__}: {e}")
+        log_error(traceback.format_exc())
+        # Log HTTP status or error body if present
+        status = getattr(e, "status_code", None) or getattr(e, "http_status", None)
+        if status:
+            log_error(f"HTTP status code: {status}")
+        error_body = getattr(e, "body", None) or getattr(e, "error", None)
+        if error_body:
+            log_error(f"Error body: {error_body}")
+        return f"Error generating {section_name}: {type(e).__name__}: {e}"

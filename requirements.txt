@@ -2,6 +2,7 @@ celery==5.3.6              # Task queue
 redis==5.0.3               # Celery broker/backend
 python-dotenv>=1.0.0       # Load .env files
 openai>=1.1.0              # OpenAI API client
+google-genai>=1.14.0       # Google Gemini AI client
 requests>=2.25.0           # HTTP requests
 asyncio>=3.4.3             # Async support (only needed for Python <3.7 but harmless here)
 google-cloud-firestore>=2.10.0  # Firestore database

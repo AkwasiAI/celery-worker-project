@@ -11,7 +11,8 @@ from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMP
     SHIPPING_INDUSTRY_PROMPT, CONCLUSION_OUTLOOK_PROMPT, REFERENCES_SOURCES_PROMPT, 
     RISK_ASSESSMENT_PROMPT, GLOBAL_TRADE_ECONOMY_PROMPT, PORTFOLIO_HOLDINGS_PROMPT,
     ENERGY_MARKETS_PROMPT, COMMODITIES_MARKETS_PROMPT, BENCHMARKING_PERFORMANCE_PROMPT,
-    BASE_SYSTEM_PROMPT, PERFORMANCE_ANALYSIS_PROMPT, ALLOCATION_CHANGES_PROMPT, INSIGHTS_CHANGES_PROMPT)
+    BASE_SYSTEM_PROMPT, PERFORMANCE_ANALYSIS_PROMPT, ALLOCATION_CHANGES_PROMPT, INSIGHTS_CHANGES_PROMPT,
+    SANITISATION_SYSTEM_PROMPT, SANITISATION_USER_PROMPT)
 from portfolio_generator.modules.logging import log_info, log_warning, log_error, log_success
 from portfolio_generator.modules.search_utils import format_search_results
 from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
@@ -23,6 +24,55 @@ from google.cloud import firestore
 from portfolio_generator.firestore_downloader import FirestoreDownloader
 from portfolio_generator.firestore_uploader import FirestoreUploader
 from google.cloud.firestore_v1.base_query import FieldFilter
+import os
+from google import genai
+from google.genai import types
+
+# New helper for Gemini sanitization, using the google-genai SDK
+def sanitize_report_content_with_gemini(report_content: str) -> str:
+    """
+    Sanitize Markdown content using the Google Gemini API.
+
+    Args:
+        report_content: The markdown string to be sanitized.
+
+    Returns:
+        The sanitized markdown string, or the original content if sanitization fails or is skipped.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        log_warning("GEMINI_API_KEY not set; skipping sanitization")
+        return report_content
+
+    try:
+        # instantiate the new genai client
+        client = genai.Client(api_key=api_key)
+
+        # Prepare prompts
+        system_prompt = SANITISATION_SYSTEM_PROMPT
+        user_prompt = SANITISATION_USER_PROMPT.format(report_content=report_content)
+
+        # Build the generation config
+        generation_config = types.GenerateContentConfig(
+            response_mime_type="text/plain"
+        )
+
+        log_info("Sending content to Gemini for sanitization…")
+        response = client.models.generate_content(
+            model="gemini-2.5-pro-preview-05-06",
+            contents=[system_prompt, user_prompt],
+            config=generation_config,
+        )
+
+        # If we got back text, return it; otherwise fall back
+        sanitized = response.text or report_content
+        log_info("Report content successfully sanitized with Gemini.")
+        return sanitized
+
+    except Exception as e:
+        log_warning(f"Error sanitizing report content with Gemini: {e}")
+        return report_content
+
 
 async def generate_investment_portfolio(test_mode=False, dry_run=False, priority_period="month"):
     """Generate a comprehensive investment portfolio report through multiple API calls.
@@ -852,6 +902,9 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     except Exception as e:
         log_error(f"Error generating portfolio JSON: {e}")
         portfolio_json = json.dumps(default_portfolio)
+
+    # sanitize report content via Gemini
+    report_content = await sanitize_report_content_with_gemini(report_content)
     
     # Write portfolio JSON to file for debugging
     try:

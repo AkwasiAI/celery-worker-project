@@ -904,7 +904,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         portfolio_json = json.dumps(default_portfolio)
 
     # sanitize report content via Gemini
-    report_content = await sanitize_report_content_with_gemini(report_content)
+    report_content = sanitize_report_content_with_gemini(report_content)
     
     # Write portfolio JSON to file for debugging
     try:

@@ -177,7 +177,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             "Commodities",
             "Central Bank Policies",
             "Macroeconomic News",
-            "Global Trade & Tariffs"
+            "Global Trade & Tariffs",
+            "Geopolitical Events"
         ]
         
         # Define detailed queries with investment principles context - identical to original
@@ -186,7 +187,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             "Commodities": [f"Provide an in depth analysis of commodities market news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
             "Central Bank Policies": [f"Provide an in depth analysis of central bank policy news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
             "Macroeconomic News": [f"Provide an in depth analysis of macroeconomic news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"]
+            "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+            "Geopolitical Events": [f"Provide an in depth analysis of geopolitical events news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"]
         }
         
         # Build the flat search_queries list and categories index list - exactly as in original
@@ -267,7 +269,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     report_sections = {}
     
     # Define the current timestamp (date and time)
-    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d")
     
     # Define base system prompt using the imported prompt
     current_year = datetime.now().year
@@ -322,7 +324,7 @@ Use these high-level market trends ONLY to inform your portfolio construction:
             extracted_lines = []
             
             # Add just enough market context without overwhelming the prompt
-            energy_added = shipping_added = commodity_added = False
+            energy_added = shipping_added = commodity_added = geopolitical_added = False
             for line in search_lines[:20]:  # Limit to first 20 lines
                 if ('energy' in line.lower() or 'oil' in line.lower()) and not energy_added:
                     extracted_lines.append("- Energy markets: " + line[:60] + "...")
@@ -333,6 +335,9 @@ Use these high-level market trends ONLY to inform your portfolio construction:
                 elif ('commodity' in line.lower() or 'metal' in line.lower()) and not commodity_added:
                     extracted_lines.append("- Commodities: " + line[:60] + "...")
                     commodity_added = True
+                elif ('geopolitical' in line.lower() or 'event' in line.lower()) and not geopolitical_added:
+                    extracted_lines.append("- Geopolitical events: " + line[:60] + "...")
+                    geopolitical_added = True
             
             if extracted_lines:
                 extracted_market_insights += "\n" + "\n".join(extracted_lines) + "\n\n"
@@ -365,7 +370,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         )
         
         # Store the markdown summary in the report sections
-        report_sections["Executive Summary"] = structured_response.summary
+        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = structured_response.summary
         
         # Extract the validated portfolio positions
         portfolio_positions = [position.dict() for position in structured_response.portfolio_positions]
@@ -376,23 +381,23 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         
         # Add the JSON back to the executive summary for backwards compatibility with any code that expects it there
         json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
-        report_sections["Executive Summary"] += f"\n\n{json_comment}"
+        report_sections["Executive Summary - Comprehensive Portfolio Summary"] += f"\n\n{json_comment}"
         
         # Increment the completed sections counter
         completed_sections += 1
-        log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary")
+        log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary - Comprehensive Portfolio Summary")
         
     except Exception as e:
-        log_error(f"Error in structured Executive Summary generation: {str(e)}")
-        log_warning("Falling back to standard Executive Summary generation...")
+        log_error(f"Error in structured Executive Summary - Comprehensive Portfolio Summary generation: {str(e)}")
+        log_warning("Falling back to standard Executive Summary - Comprehensive Portfolio Summary generation...")
         
         # Fallback to the previous approach if the structured generator fails
         enhanced_exec_summary_prompt = exec_summary_prompt + "\n\nCRITICAL REQUIREMENT: You MUST include a valid JSON array of all portfolio positions inside an HTML comment block, formatted EXACTLY as follows:\n<!-- PORTFOLIO_POSITIONS_JSON:\n[\n  {\"asset\": \"TICKER\", \"position_type\": \"LONG/SHORT\", \"allocation_percent\": X, \"time_horizon\": \"PERIOD\", \"confidence_level\": \"LEVEL\"},\n  ...\n]\n-->\nThis hidden JSON is essential for downstream processing and MUST be included exactly as specified, even when using web search."
         
         # Generate Executive Summary using standard generation without web search as fallback
-        report_sections["Executive Summary"] = await generate_section(
+        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = await generate_section(
             client=client,
-            section_name="Executive Summary",
+            section_name="Executive Summary - Comprehensive Portfolio Summary",
             system_prompt=base_system_prompt,
             user_prompt=enhanced_exec_summary_prompt,
             search_results=formatted_search_results,
@@ -407,19 +412,19 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         # Extract portfolio positions JSON from executive summary using the HTML comment format
         portfolio_positions = []
         portfolio_json = None
-        json_match = re.search(r'<!--\s*PORTFOLIO_POSITIONS_JSON:\s*(\[.*?\])\s*-->', report_sections["Executive Summary"], re.DOTALL)
+        json_match = re.search(r'<!--\s*PORTFOLIO_POSITIONS_JSON:\s*(\[.*?\])\s*-->', report_sections["Executive Summary - Comprehensive Portfolio Summary"], re.DOTALL)
         
         if json_match:
             try:
                 portfolio_positions = json.loads(json_match.group(1))
                 portfolio_json = json.dumps(portfolio_positions, indent=2)
-                log_info(f"Successfully extracted {len(portfolio_positions)} portfolio positions from fallback executive summary.")
+                log_info(f"Successfully extracted {len(portfolio_positions)} portfolio positions from fallback executive summary - Comprehensive Portfolio Summary.")
             except Exception as e:
-                log_warning(f"Failed to parse portfolio positions JSON from fallback executive summary: {e}")
+                log_warning(f"Failed to parse portfolio positions JSON from fallback executive summary - Comprehensive Portfolio Summary: {e}")
                 raise  # Re-raise to trigger the default positions
         else:
-            log_warning("No portfolio positions JSON found in fallback executive summary.")
-            raise ValueError("No portfolio positions found in executive summary")
+            log_warning("No portfolio positions JSON found in fallback executive summary - Comprehensive Portfolio Summary.")
+            raise ValueError("No portfolio positions found in executive summary - Comprehensive Portfolio Summary")
             
     except Exception as e:
         log_warning(f"Fallback extraction failed: {str(e)}. Generating default portfolio positions...")
@@ -450,7 +455,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             
             # Insert the portfolio positions JSON into the executive summary
             json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
-            report_sections["Executive Summary"] += f"\n\n{json_comment}"
+            report_sections["Executive Summary - Comprehensive Portfolio Summary"] += f"\n\n{json_comment}"
         except Exception as e:
             log_error(f"Failed to generate default portfolio positions: {e}")
     
@@ -463,7 +468,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         global_economy_prompt,
         formatted_search_results,
-        {"Executive Summary": report_sections["Executive Summary"]},
+        {"Executive Summary - Comprehensive Portfolio Summary": report_sections["Executive Summary - Comprehensive Portfolio Summary"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -480,7 +485,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         energy_markets_prompt,
         formatted_search_results,
-        {"Executive Summary": report_sections["Executive Summary"], "Global Trade & Economy": report_sections["Global Trade & Economy"]},
+        {"Executive Summary - Comprehensive Portfolio Summary": report_sections["Executive Summary - Comprehensive Portfolio Summary"], "Global Trade & Economy": report_sections["Global Trade & Economy"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -497,7 +502,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         commodities_prompt,
         formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets"]},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -514,7 +519,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         shipping_prompt,
         formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets"]},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -532,7 +537,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         system_prompt=base_system_prompt,
         user_prompt=portfolio_prompt,
         search_results=formatted_search_results,
-        previous_sections={k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry"]},
+        previous_sections={k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry"]},
         target_word_count=per_section_word_count,
         investment_principles=investment_principles
     )
@@ -549,7 +554,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         benchmarking_prompt,
         formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Portfolio Holdings"]},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Portfolio Holdings"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -566,7 +571,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         risk_prompt,
         formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Portfolio Holdings"]},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Portfolio Holdings"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -583,7 +588,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         conclusion_prompt,
         formatted_search_results,
-        {k: report_sections[k] for k in ["Executive Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment"]},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -600,7 +605,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         base_system_prompt,
         references_prompt,
         formatted_search_results,
-        {},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment", "Conclusion & Outlook"]},
         per_section_word_count,
         investment_principles=investment_principles
     )
@@ -615,13 +620,13 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         old_portfolio_weights=prev_allocation_weights,
         current_portfolio_weights=portfolio_json
     )
-    report_sections["Allocation"] = await generate_section(
+    report_sections["Executive Summary - Allocation"] = await generate_section(
         client,
-        "Allocation",
+        "Executive Summary - Allocation",
         base_system_prompt,
         allocation_prompt,
         formatted_search_results,
-        {},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment", "Conclusion & Outlook"]},
         target_word_count=50,
         investment_principles=investment_principles
     )
@@ -633,22 +638,22 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         old_portfolio_weights=prev_allocation_weights,
         current_portfolio_weights=portfolio_json
     )
-    report_sections["Insights"] = await generate_section(
+    report_sections["Executive Summary - Insights"] = await generate_section(
         client,
-        "Insights",
+        "Executive Summary - Insights",
         base_system_prompt,
         insights_prompt,
         formatted_search_results,
-        {},
+        {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Portfolio Holdings", "Risk Assessment", "Conclusion & Outlook", "Executive Summary - Allocation"]},
         target_word_count=50,
         investment_principles=investment_principles
     )
     completed_sections += 1
-    log_info(f"Completed section {completed_sections}/{total_sections}: Insights")
+    log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary - Insights")
     
     # Combine all sections into a single report
     report_content = f"""# Investment Portfolio Report
-**Date: {current_date}**
+**Date: {current_date}, Report generation completed at Time: {datetime.now().strftime('%H:%M:%S')}, Athens Time.**
 
 """
     
@@ -669,7 +674,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         "Commodities", 
         "Central Bank Policies",
         "Global Trade",
-        "Energy Markets"
+        "Energy Markets",
+        "Geopolitical Events"
     ]
     
     # Use category_order to create a simpler categories structure with one entry per category
@@ -686,14 +692,16 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             "Commodities", 
             "Central Bank Policies",
             "Macroeconomic News",
-            "Global Trade & Tariffs"
+            "Global Trade & Tariffs",
+            "Geopolitical Events"
         ]
         category_queries = {
             "Shipping": [f"Provide an in depth analysis of shipping news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles],
             "Commodities": [f"Provide an in depth analysis of commodities market news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles],
             "Central Bank Policies": [f"Provide an in depth analysis of central bank policy news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles],
             "Macroeconomic News": [f"Provide an in depth analysis of macroeconomic news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles],
-            "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles]
+            "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles],
+            "Geopolitical Events": [f"Provide an in depth analysis of geopolitical events news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: " + investment_principles]
         }
             
         # Build the flat search_queries list and categories index list
@@ -743,7 +751,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             formatted_categories.append((cat_name, start_idx, end_idx))
             start_idx = end_idx
         
-        new_categories_akwasi = ["Shipping","Commodities","Central Bank Policies","Macroeconomic News","Global Trade & Tariffs"]
+        new_categories_akwasi = ["Shipping","Commodities","Central Bank Policies","Macroeconomic News","Global Trade & Tariffs","Geopolitical Events"]
         
         # Generate the news section - directly await the async function
         news_section = await generate_news_update_section(
@@ -764,9 +772,9 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # Define the section order
     section_order = [
         "Latest Market News",
-        "Allocation",
-        "Insights",
-        "Executive Summary",
+        "Executive Summary - Allocation",
+        "Executive Summary - Insights",
+        "Executive Summary - Comprehensive Portfolio Summary",
         "Global Trade & Economy",
         "Energy Markets",
         "Commodities Markets",
@@ -921,7 +929,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             base_system_prompt,
             performance_prompt,
             formatted_search_results,
-            {},
+            {k: report_sections[k] for k in ["Executive Summary - Comprehensive Portfolio Summary", "Global Trade & Economy", "Energy Markets", "Commodities Markets", "Shipping Industry", "Portfolio Holdings", "Risk Assessment", "Conclusion & Outlook"]},
             per_section_word_count,
             investment_principles=investment_principles
         )

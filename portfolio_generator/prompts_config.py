@@ -400,7 +400,7 @@ The current allocation is:
 {current_portfolio_weights}
 
 Format in markdown starting with:
-## Allocation
+## Executive Summary - Allocation
 '''
 
 INSIGHTS_CHANGES_PROMPT = '''Write concise, 50-word rationales for portfolio changes:
@@ -414,7 +414,7 @@ The current allocation is:
 {current_portfolio_weights}
 
 Format in markdown starting with:
-## Insights
+## Executive Summary - Insights
 '''
 
 BENCHMARK_CALCULATIONS_PROMPT = '''Respond with only the JSON object containing the following benchmarking metrics for the given portfolio weights. Do not include any code fences, markdown formatting, or extra text.

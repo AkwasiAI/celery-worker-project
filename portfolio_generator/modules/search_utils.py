@@ -26,8 +26,10 @@ def format_search_results(search_results):
     for i, result in enumerate(valid_results):
         query = result.get("query", "Unknown query")
         content = result["results"][0].get("content", "No content available")
+        sources = result["citations"]
         
-        formatted_text += f"\n---Result {i+1}: {query}---\n{content}\n"
+        formatted_text += f"\n---Result {i+1}: {query}---\n{content}\n---\CITATIONS: {sources}\n"
+    log_info(formatted_text)
     
     log_info(f"Formatted {len(valid_results)} valid search results for use in prompts")
     return formatted_text

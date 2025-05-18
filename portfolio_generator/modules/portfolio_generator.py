@@ -33,7 +33,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         
         # Construct a prompt asking to generate portfolio JSON
         system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
-        Your goal is to identify all assets mentioned in the report and organize them into a structured JSON format.
+        Your goal is to identify all assets mentioned in the report and organize them into a structured JSON format. You must also identify positions that were removed from the previous portfolio.
 
         {investment_principles if investment_principles else ""}
 
@@ -56,6 +56,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "region": "North America",
                 "sector": "Technology",
                 "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
+                "wasRemoved": true/false  (boolean indicating if this position was removed from the previous portfolio)
               },
               {
                 "ticker": "WMT",
@@ -68,6 +69,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "region": "North America",
                 "sector": "Consumer Staples",
                 "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
+                "wasRemoved": true/false  (boolean indicating if this position was removed from the previous portfolio)
               },
               {
                 "ticker": "GS",
@@ -80,6 +82,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "region": "North America",
                 "sector": "Financials",
                 "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
+                "wasRemoved": true/false  (boolean indicating if this position was removed from the previous portfolio)
               }
             ],
             "portfolio_stats": {
@@ -108,6 +111,8 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         }"""
         
         user_prompt = f"""Generate a structured JSON object representing the current investment portfolio based on the provided report content.
+        After extracting the portfolio assets and statistics from the report content, ensure that the "wasRemoved" boolean is set to true for each asset that was in the prior portfolio weights but is not in the current report content. 
+        Use the Prior portfolio weights: to identify which assets were removed. 
         
         The JSON should follow this format:
         {{
@@ -125,6 +130,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
                 "region": "Region name",
                 "sector": "Sector name",
                 "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
+                "wasRemoved": true/false  (boolean indicating if this position was removed from the previous portfolio)  
               }}
             ],
             "portfolio_stats": {{
@@ -147,6 +153,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         {old_portfolio_weights}
         
         Include an "isNew" boolean for each asset: set to true if the asset ticker was not in the prior portfolio weights, otherwise false.
+        Include an "wasRemoved" boolean for each asset: set to true if the asset ticker was in the prior portfolio weights, otherwise false.
         
         TASK REPEATED: Extract all portfolio assets and statistics from the report content and format them in the specified JSON structure.
         
@@ -159,6 +166,7 @@ async def generate_portfolio_json(client, assets_list, current_date, report_cont
         6. Horizons must be one of: "6-12M", "3-6M", "12-18M", or "18M+"
         7. Regions must be one of: "North America", "Europe", "Asia", "Latin America", "Africa", "Oceania", or "Global" (use "Global" if unknown)
         8. Each asset rationale should clearly connect to the investment principles
+        9. Ensure removed positions are marked as "wasRemoved": true and are at the end of the assets list
         """
 
         
@@ -265,6 +273,7 @@ async def generate_alternative_portfolio_weights(client, old_assets_list, alt_re
         old_assets_json = json.dumps(old_assets_list, indent=2)
         system_prompt = f"""You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.
 Your goal is to identify all assets mentioned in the alternative report and organize them into a structured JSON format.
+You are also to mark assets that are removed from the portfolio as "wasRemoved": true at the end of the assets list.
 
 Here are the Orasis investment principles to guide your rationales:
 {investment_principles if investment_principles else ""}
@@ -286,7 +295,9 @@ Use only the following regions: North America, Europe, Asia, Latin America, Afri
                 "horizon": "12-18M",
                 "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
                 "region": "North America",
-                "sector": "Technology"
+                "sector": "Technology",
+                "isNew": true,
+                "wasRemoved": false
               },
               {
                 "ticker": "WMT",
@@ -297,7 +308,9 @@ Use only the following regions: North America, Europe, Asia, Latin America, Afri
                 "horizon": "6-12M",
                 "rationale": "Walmart's defensive characteristics and e-commerce growth support our counter-cyclical investment approach during inflationary periods, providing portfolio stability while maintaining growth potential.",
                 "region": "North America",
-                "sector": "Consumer Staples"
+                "sector": "Consumer Staples",
+                "isNew": false,
+                "wasRemoved": false
               },
               {
                 "ticker": "GS",
@@ -308,7 +321,35 @@ Use only the following regions: North America, Europe, Asia, Latin America, Afri
                 "horizon": "3-6M",
                 "rationale": "Increased regulatory pressure and declining investment banking revenues run counter to our principle of targeting businesses with sustainable competitive advantages in growing markets.",
                 "region": "North America",
-                "sector": "Financials"
+                "sector": "Financials",
+                "isNew": false,
+                "wasRemoved": true
+              },
+              {
+                "ticker": "TSLA",
+                "name": "Tesla, Inc.",
+                "position": "LONG",
+                "weight": 0.08,
+                "target_price": 225.50,
+                "horizon": "12-18M",
+                "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
+                "region": "North America",
+                "sector": "Technology",
+                "isNew": false,
+                "wasRemoved": true
+              },
+              {
+                "ticker": "JPM",
+                "name": "JPMorgan Chase & Co.",
+                "position": "LONG",
+                "weight": 0.05,
+                "target_price": 225.50,
+                "horizon": "12-18M",
+                "rationale": "JPMorgan's strong balance sheet and solid earnings provide a stable foundation for our counter-cyclical investment approach, aligning with our principle of targeting businesses with sustainable competitive advantages in growing markets.",
+                "region": "North America",
+                "sector": "ETFs",
+                "isNew": false,
+                "wasRemoved": true
               }
             ],
             "portfolio_stats": {
@@ -352,7 +393,9 @@ The JSON should follow this format:
         "horizon": "6-12M or 3-6M or 12-18M or 18M+",
         "rationale": "Specific investment rationale tied to investment principles",
         "region": "Region name",
-        "sector": "Sector name"
+        "sector": "Sector name",
+        "isNew": true/false  (boolean indicating if this is a new position not in the previous portfolio)
+        "wasRemoved": true/false  (boolean indicating if this position was removed from the previous portfolio)
       }}
     ],
     "portfolio_stats": {{
@@ -374,9 +417,13 @@ Original portfolio asset list:
 Full alternative report content:
 {alt_report_content}
 
+Include an "isNew" boolean for each asset: set to true if the asset ticker was not in the prior portfolio weights, otherwise false.
+Include an "wasRemoved" boolean for each asset: set to true if the asset ticker was in the prior portfolio weights, otherwise false.
+
 Emphasis: Provide specific, principle-based rationales explicitly tied to the Orasis investment principles; avoid generic statements like "Investment aligned with market outlook".
 
 TASK REPEATED: Extract all portfolio assets and statistics from the alternative report content and format them in the specified JSON structure.
+Ensure that the "wasRemoved" boolean is set to true for assets that are not in the new portfolio but were in the original portfolio list.
 
 IMPORTANT: Ensure 'investment_type_breakdown' values sum to 1.0 (LONG + SHORT = 1.0).
 """

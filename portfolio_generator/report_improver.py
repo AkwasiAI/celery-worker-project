@@ -159,9 +159,14 @@ async def _run_improvement_logic(document_id: str, annotations: list, weight_cha
     scratchpad_text = f"{video_feedback_section}\n\n{portfolio_feedback_section}"
     try:
         uploader = EnhancedFirestoreUploader()
+        # Update the is_latest field of all other documents to False
+        uploader.db.collection("alternative-portfolio-scratchpad").where("is_latest", "==", True).update({"is_latest": False})
+        
+        # Upload the new scratchpad
         uploader.db.collection("alternative-portfolio-scratchpad").document(document_id).set({
             "scratchpad": scratchpad_text,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+            "is_latest": True
         })
         log_success(f"Uploaded scratchpad feedback for document {document_id} to 'alternative-portfolio-scratchpad'.")
     except Exception as e:

@@ -113,7 +113,7 @@ def cleanup_uploaded_file(uploaded_file: genai.types.File):
     try:
         # Use the client to delete the file
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        client.files.delete(uploaded_file.name)
+        client.files.delete(name=uploaded_file.name)
         logging.info(f"Cleaned up uploaded file: {uploaded_file.display_name}")
     except Exception as e:
         logging.warning(f"Failed to cleanup file {uploaded_file.display_name}: {e}")

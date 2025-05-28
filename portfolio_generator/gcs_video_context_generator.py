@@ -1,207 +1,480 @@
 import os
-import tempfile
-import base64
 import logging
-from typing import List, Optional
+import time
+import tempfile
+from typing import List, Optional, Tuple
+from pathlib import Path
 
 from dotenv import load_dotenv
+from google import genai
 from google.cloud import storage
-import openai
-import cv2
-from PIL import Image
-import numpy as np
-
-# Optional: tiktoken for accurate token counting
-try:
-    import tiktoken
-    TIKTOKEN_AVAILABLE = True
-except ImportError:
-    TIKTOKEN_AVAILABLE = False
-
-def load_env():
-    load_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Configuration constants
-default_bucket_name = "screenrecordinghedgefundintelligence"
-default_base_path = "videos"
-default_valid_video_exts = {".mp4", ".mov", ".avi", ".webm"}
-default_frame_interval_seconds = 5
-default_max_context_tokens_to_return = 3072
-default_max_chunk_tokens_for_summarization = 1200
-default_vision_model = "gpt-4.1"
-default_summarization_model = "gpt-4.1-mini"
-default_fps = 24
+DEFAULT_MODEL = "gemini-2.5-pro-preview-05-06"
+DEFAULT_VALID_VIDEO_EXTS = {".mp4", ".mov", ".avi", ".webm", ".mkv"}
+DEFAULT_BUCKET_NAME = "screenrecordinghedgefundintelligence"
+DEFAULT_BASE_PATH = "videos"
+DEFAULT_CONTEXT_EXTRACTION_PROMPT = """
+Analyze this video comprehensively and extract all relevant context. Focus on:
 
-def encode_image_to_base64(frame: np.ndarray) -> str:
-    _, buffer = cv2.imencode('.jpg', frame)
-    return base64.b64encode(buffer).decode('utf-8')
+1. Key visual elements and scenes
+2. Any text, data, or information displayed
+3. Important actions or events that occur
+4. Audio content if present (dialogue, narration, sounds)
+5. Overall themes and main points
+6. Timeline of events or progression
+7. Any technical or domain-specific information
 
-def count_tokens(text: str, model: str = default_summarization_model) -> int:
-    if TIKTOKEN_AVAILABLE:
-        try:
-            enc = tiktoken.encoding_for_model(model)
-            return len(enc.encode(text))
-        except Exception:
-            pass
-    # Fallback: rough estimate (1 token ≈ 4 chars for English)
-    return max(1, len(text) // 4)
+Provide a detailed summary that captures the essential context someone would need to understand what this video contains and its key information.
+"""
 
-def call_openai_vision_api(image_b64: str, model: str) -> Optional[str]:
+def load_env():
+    """Load environment variables."""
+    load_dotenv()
+
+def upload_video_file(file_path: str, display_name: Optional[str] = None) -> genai.types.File:
+    """
+    Upload a video file to Gemini Files API.
+    
+    Args:
+        file_path: Path to the video file
+        display_name: Optional display name for the file
+        
+    Returns:
+        Uploaded file object
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Video file not found: {file_path}")
+    
+    if not display_name:
+        display_name = os.path.basename(file_path)
+    
+    logging.info(f"Uploading video file: {file_path}")
+    
     try:
-        response = openai.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are an expert financial analyst."},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Analyze this frame from a financial terminal screen recording. Describe key data points, text, charts, indicators, and overall information presented."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}", "detail": "low"}},
-                    ],
-                },
-            ],
-            max_tokens=256,
+        # Use genai.Client for file upload
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        uploaded_file = client.files.upload(
+            file=file_path,
+            config={
+                "display_name": display_name  # Use actual display name instead of "test"
+            }
         )
-        return response.choices[0].message.content.strip()
+        
+        # Wait for file processing to complete - THIS IS CRITICAL!
+        while uploaded_file.state == "PROCESSING":
+            logging.info("Waiting for video processing to complete...")
+            time.sleep(2)
+            # Refresh file state via client
+            uploaded_file = client.files.get(name=uploaded_file.name)
+        
+        if uploaded_file.state == "FAILED":
+            raise Exception(f"Video processing failed: {uploaded_file.state}")
+            
+        logging.info(f"Video uploaded successfully: {uploaded_file.name} (state: {uploaded_file.state})")
+        return uploaded_file
+        
     except Exception as e:
-        logging.error(f"OpenAI Vision API error: {e}")
-        return None
+        logging.error(f"Failed to upload video {file_path}: {e}")
+        raise
 
-def call_openai_summarize_api(text: str, model: str) -> Optional[str]:
+def extract_context_from_video(
+    uploaded_file: genai.types.File, 
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL
+) -> Optional[str]:
+    """
+    Extract context from an uploaded video using Gemini.
+    """
     try:
-        response = openai.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are an expert financial analyst."},
-                {"role": "user", "content": f"Summarize the following extracted descriptions from a financial screen recording, focusing on key financial data, trends, and insights. Be concise.\n\n{text}"},
-            ],
-            max_tokens=512,
+        # Initialize Gemini client
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        logging.info(f"Analyzing video: {uploaded_file.name}")
+        
+        # Generate content using the specified model
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[uploaded_file, prompt]
         )
-        return response.choices[0].message.content.strip()
+        
+        if response.text:
+            logging.info(f"Successfully extracted context from {uploaded_file.name}")
+            return response.text.strip()
+        
+        logging.warning(f"No context extracted from {uploaded_file.name}")
+        return None
+            
     except Exception as e:
-        logging.error(f"OpenAI Summarization API error: {e}")
+        logging.error(f"Error extracting context from {uploaded_file.name}: {e}")
         return None
 
-def _process_single_video_blob(blob, tmp_dir: str, frame_interval_seconds: int, max_chunk_tokens_for_summarization: int, vision_model: str, summarization_model: str) -> Optional[str]:
-    video_contexts = []
-    chunk = []
-    chunk_token_count = 0
-    temp_video_path = None
+def cleanup_uploaded_file(uploaded_file: genai.types.File):
+    """Clean up uploaded file from Gemini Files API."""
     try:
-        # Download blob to temp file
-        with tempfile.NamedTemporaryFile(delete=False, dir=tmp_dir, suffix=os.path.splitext(blob.name)[1]) as tmp_file:
-            temp_video_path = tmp_file.name
-            blob.download_to_filename(temp_video_path)
-        cap = cv2.VideoCapture(temp_video_path)
-        if not cap.isOpened():
-            logging.error(f"Failed to open video: {blob.name}")
-            return None
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if not fps or fps <= 1e-2:
-            fps = default_fps
-        frame_interval = int(fps * frame_interval_seconds)
-        frame_idx = 0
-        success, frame = cap.read()
-        while success:
-            if frame_idx % frame_interval == 0:
-                try:
-                    image_b64 = encode_image_to_base64(frame)
-                    desc = call_openai_vision_api(image_b64, vision_model)
-                    if desc:
-                        desc_tokens = count_tokens(desc, summarization_model)
-                        if chunk_token_count + desc_tokens > max_chunk_tokens_for_summarization:
-                            # Summarize current chunk
-                            chunk_text = "\n".join(chunk)
-                            summary = call_openai_summarize_api(chunk_text, summarization_model)
-                            if summary:
-                                video_contexts.append(summary)
-                            chunk = []
-                            chunk_token_count = 0
-                        chunk.append(desc)
-                        chunk_token_count += desc_tokens
-                except Exception as e:
-                    logging.error(f"Frame processing error in {blob.name}: {e}")
-            success, frame = cap.read()
-            frame_idx += 1
-        # Summarize any remaining chunk
-        if chunk:
-            chunk_text = "\n".join(chunk)
-            summary = call_openai_summarize_api(chunk_text, summarization_model)
-            if summary:
-                video_contexts.append(summary)
-        cap.release()
-        return "\n".join(video_contexts)
+        # Use the client to delete the file
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        client.files.delete(uploaded_file.name)
+        logging.info(f"Cleaned up uploaded file: {uploaded_file.display_name}")
     except Exception as e:
-        logging.error(f"Error processing video {blob.name}: {e}")
-        return None
-    finally:
-        if temp_video_path and os.path.exists(temp_video_path):
-            try:
-                os.remove(temp_video_path)
-            except Exception as e:
-                logging.warning(f"Failed to remove temp file {temp_video_path}: {e}")
+        logging.warning(f"Failed to cleanup file {uploaded_file.display_name}: {e}")
 
-def generate_context_from_gcs_folder(
+def get_latest_video_from_gcs(
     folder_id: str,
-    frame_interval_seconds: int = default_frame_interval_seconds,
-    max_context_tokens_to_return: int = default_max_context_tokens_to_return,
-    max_chunk_tokens_for_summarization: int = default_max_chunk_tokens_for_summarization,
-    vision_model: str = default_vision_model,
-    summarization_model: str = default_summarization_model,
-    bucket_name: str = default_bucket_name,
-    base_path: str = default_base_path,
-    valid_video_exts: set = default_valid_video_exts,
+    bucket_name: str = DEFAULT_BUCKET_NAME,
+    base_path: str = DEFAULT_BASE_PATH,
+    valid_extensions: set = DEFAULT_VALID_VIDEO_EXTS
+) -> Optional[Tuple[storage.Blob, str]]:
+    """
+    Get the latest video file from a GCS folder based on creation time.
+    
+    Args:
+        folder_id: The folder ID (e.g., 'SrFrHmacE8wK82XH6Q8d')
+        bucket_name: GCS bucket name
+        base_path: Base path in bucket
+        valid_extensions: Set of valid video extensions
+        
+    Returns:
+        Tuple of (blob, local_temp_path) for the latest video, or None if not found
+    """
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        prefix = f"{base_path}/{folder_id}/"
+        
+        logging.info(f"Searching for videos in gs://{bucket_name}/{prefix}")
+        
+        # List all blobs in the folder
+        blobs = list(bucket.list_blobs(prefix=prefix))
+        
+        # Filter for video files
+        video_blobs = [
+            blob for blob in blobs
+            if any(blob.name.lower().endswith(ext) for ext in valid_extensions)
+            and blob.size > 0 
+            and not blob.name.endswith('/')  # Exclude folder markers
+        ]
+        
+        if not video_blobs:
+            logging.warning(f"No video files found in gs://{bucket_name}/{prefix}")
+            return None
+        
+        logging.info(f"Found {len(video_blobs)} video files")
+        
+        # Sort by creation time (most recent first)
+        video_blobs.sort(key=lambda blob: blob.time_created, reverse=True)
+        
+        # Get the latest video
+        latest_blob = video_blobs[0]
+        
+        logging.info(f"Latest video: {latest_blob.name} (created: {latest_blob.time_created})")
+        
+        # Download to temporary file
+        temp_dir = tempfile.mkdtemp()
+        filename = os.path.basename(latest_blob.name)
+        temp_path = os.path.join(temp_dir, filename)
+        
+        logging.info(f"Downloading {latest_blob.name} to {temp_path}")
+        latest_blob.download_to_filename(temp_path)
+        
+        return latest_blob, temp_path
+        
+    except Exception as e:
+        logging.error(f"Error getting latest video from GCS: {e}")
+        return None
+
+def process_latest_video_from_gcs(
+    folder_id: str,
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL,
+    bucket_name: str = DEFAULT_BUCKET_NAME,
+    base_path: str = DEFAULT_BASE_PATH,
+    cleanup: bool = True
+) -> Optional[dict]:
+    """
+    Process the latest video from a GCS folder and extract context.
+    
+    Args:
+        folder_id: The folder ID (e.g., 'SrFrHmacE8wK82XH6Q8d')
+        prompt: Custom prompt for context extraction
+        model_name: Gemini model to use
+        bucket_name: GCS bucket name
+        base_path: Base path in bucket
+        cleanup: Whether to cleanup uploaded files after processing
+        
+    Returns:
+        Dictionary with video info and extracted context, or None if failed
+    """
+    temp_path = None
+    uploaded_file = None
+    
+    try:
+        # Get the latest video from GCS
+        result = get_latest_video_from_gcs(folder_id, bucket_name, base_path)
+        if not result:
+            return None
+        
+        blob, temp_path = result
+        
+        # Upload to Gemini Files API
+        uploaded_file = upload_video_file(temp_path, os.path.basename(blob.name))
+        
+        # Extract context
+        context = extract_context_from_video(uploaded_file, prompt, model_name)
+        
+        return {
+            'gcs_path': f"gs://{bucket_name}/{blob.name}",
+            'filename': os.path.basename(blob.name),
+            'size_bytes': blob.size,
+            'created_time': blob.time_created,
+            'context': context,
+            'success': context is not None
+        }
+        
+    except Exception as e:
+        logging.error(f"Error processing latest video: {e}")
+        return {
+            'gcs_path': None,
+            'filename': None,
+            'size_bytes': None,
+            'created_time': None,
+            'context': None,
+            'success': False,
+            'error': str(e)
+        }
+        
+    finally:
+        # Cleanup
+        if uploaded_file and cleanup:
+            cleanup_uploaded_file(uploaded_file)
+        
+        if temp_path and os.path.exists(temp_path):
+            try:
+                # Clean up temp file and directory
+                os.remove(temp_path)
+                os.rmdir(os.path.dirname(temp_path))
+            except Exception as e:
+                logging.warning(f"Failed to cleanup temp file {temp_path}: {e}")
+
+def generate_context_from_latest_video(
+    folder_id: str,
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL,
+    bucket_name: str = DEFAULT_BUCKET_NAME,
+    base_path: str = DEFAULT_BASE_PATH
 ) -> str:
     """
-    Processes all valid videos in a GCS folder, extracts and summarizes their content, and returns a combined context string.
+    Generate context from the latest video in a GCS folder.
+    This is the main function that replaces the original generate_context_from_gcs_folder.
+    
+    Args:
+        folder_id: The folder ID (e.g., 'SrFrHmacE8wK82XH6Q8d')
+        prompt: Custom prompt for context extraction
+        model_name: Gemini model to use
+        bucket_name: GCS bucket name
+        base_path: Base path in bucket
+        
+    Returns:
+        Extracted context as string, or empty string if failed
     """
     load_env()
-    logging.info(f"Starting context generation for folder_id: {folder_id}")
-    client = storage.Client()
-    prefix = f"{base_path}/{folder_id}/"
+    
+    logging.info(f"Processing latest video from folder: {folder_id}")
+    
+    result = process_latest_video_from_gcs(
+        folder_id, prompt, model_name, bucket_name, base_path
+    )
+    
+    if not result or not result.get('success'):
+        logging.error(f"Failed to process latest video from folder: {folder_id}")
+        return ""
+    
+    filename = result.get('filename', 'unknown')
+    context = result.get('context', '')
+    
+    return f"\n==== Context from latest video: {filename} ====\n\n{context}"
+
+def process_video_file(
+    file_path: str, 
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL,
+    cleanup: bool = True
+) -> Optional[str]:
+    """
+    Process a single video file and extract context.
+    
+    Args:
+        file_path: Path to the video file
+        prompt: Custom prompt for context extraction
+        model_name: Gemini model to use
+        cleanup: Whether to cleanup uploaded file after processing
+        
+    Returns:
+        Extracted context as string, or None if failed
+    """
+    uploaded_file = None
     try:
-        blobs = list(client.list_blobs(bucket_name, prefix=prefix))
-    except Exception as e:
-        logging.error(f"Failed to list blobs in {bucket_name}/{prefix}: {e}")
-        return ""
-    video_blobs = [
-        blob for blob in blobs
-        if any(blob.name.lower().endswith(ext) for ext in valid_video_exts)
-        and blob.size > 0
-        and blob.name != prefix
-    ]
-    if not video_blobs:
-        logging.warning(f"No valid video files found in {bucket_name}/{prefix}")
-        # Return empty string so caller can proceed gracefully
-        return ""
-    all_contexts = []
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        for blob in video_blobs:
-            logging.info(f"Processing video: {blob.name}")
-            context = _process_single_video_blob(
-                blob,
-                tmp_dir,
-                frame_interval_seconds,
-                max_chunk_tokens_for_summarization,
-                vision_model,
-                summarization_model,
+        uploaded_file = upload_video_file(file_path)
+        context = extract_context_from_video(uploaded_file, prompt, model_name)
+        return context
+        
+    finally:
+        if uploaded_file and cleanup:
+            cleanup_uploaded_file(uploaded_file)
+
+def process_video_directory(
+    directory_path: str,
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL,
+    valid_extensions: set = DEFAULT_VALID_VIDEO_EXTS,
+    cleanup: bool = True
+) -> List[dict]:
+    """
+    Process all video files in a directory and extract context.
+    
+    Args:
+        directory_path: Path to directory containing video files
+        prompt: Custom prompt for context extraction
+        model_name: Gemini model to use
+        valid_extensions: Set of valid video file extensions
+        cleanup: Whether to cleanup uploaded files after processing
+        
+    Returns:
+        List of dictionaries with filename and extracted context
+    """
+    directory = Path(directory_path)
+    if not directory.exists():
+        raise FileNotFoundError(f"Directory not found: {directory_path}")
+    
+    # Find all video files
+    video_files = []
+    for ext in valid_extensions:
+        video_files.extend(directory.glob(f"*{ext}"))
+        video_files.extend(directory.glob(f"*{ext.upper()}"))
+    
+    if not video_files:
+        logging.warning(f"No video files found in {directory_path}")
+        return []
+    
+    results = []
+    
+    for video_file in video_files:
+        logging.info(f"Processing video: {video_file.name}")
+        
+        try:
+            context = process_video_file(
+                str(video_file), 
+                prompt, 
+                model_name, 
+                cleanup
             )
-            if context:
-                filename = os.path.basename(blob.name)
-                all_contexts.append(f"\n\n==== Context from video: {filename} ====\n\n{context}")
-            else:
-                logging.warning(f"No context generated for video: {blob.name}")
-    final_context = "\n".join(all_contexts)
-    total_tokens = count_tokens(final_context, summarization_model)
-    if total_tokens > max_context_tokens_to_return:
-        logging.info(f"Final context exceeds {max_context_tokens_to_return} tokens; summarizing.")
-        summary = call_openai_summarize_api(final_context, summarization_model)
-        if summary:
-            final_context = summary
+            
+            results.append({
+                'filename': video_file.name,
+                'filepath': str(video_file),
+                'context': context,
+                'success': context is not None
+            })
+            
+        except Exception as e:
+            logging.error(f"Failed to process {video_file.name}: {e}")
+            results.append({
+                'filename': video_file.name,
+                'filepath': str(video_file),
+                'context': None,
+                'success': False,
+                'error': str(e)
+            })
+    
+    return results
+
+def generate_combined_context(
+    video_paths: List[str],
+    prompt: str = DEFAULT_CONTEXT_EXTRACTION_PROMPT,
+    model_name: str = DEFAULT_MODEL,
+    cleanup: bool = True
+) -> str:
+    """
+    Process multiple video files and combine their contexts.
+    
+    Args:
+        video_paths: List of paths to video files
+        prompt: Custom prompt for context extraction
+        model_name: Gemini model to use
+        cleanup: Whether to cleanup uploaded files after processing
+        
+    Returns:
+        Combined context from all videos
+    """
+    contexts = []
+    
+    for video_path in video_paths:
+        if not os.path.exists(video_path):
+            logging.warning(f"Video file not found: {video_path}")
+            continue
+            
+        context = process_video_file(video_path, prompt, model_name, cleanup)
+        
+        if context:
+            filename = os.path.basename(video_path)
+            contexts.append(f"\n==== Context from video: {filename} ====\n\n{context}")
         else:
-            logging.error("Final summarization failed; returning truncated context.")
-            # Truncate to token limit
-            approx_chars = max_context_tokens_to_return * 4
-            final_context = final_context[:approx_chars]
-    return final_context
+            logging.warning(f"No context extracted from {video_path}")
+    
+    return "\n".join(contexts)
+
+# Example usage functions
+def main():
+    """Example usage of the video context extractor."""
+    load_env()
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    
+    # Example 1: Process latest video from GCS folder (NEW - Main use case)
+    folder_id = "SrFrHmacE8wK82XH6Q8d"  # Your folder ID
+    context = generate_context_from_latest_video(folder_id)
+    print("Latest Video Context:", context)
+    
+    # Example 2: Process latest video with custom financial prompt
+    # financial_prompt = """
+    # Extract all financial data, charts, and key metrics shown in this video.
+    # Focus on:
+    # - Stock prices and movements
+    # - Trading volumes
+    # - Market indicators
+    # - Financial news or announcements
+    # - Any numerical data or statistics
+    # - Screen recordings of trading platforms or financial terminals
+    # """
+    # 
+    # context = generate_context_from_latest_video(folder_id, financial_prompt)
+    # print("Financial Context:", context)
+    
+    # Example 3: Get detailed info about the latest video
+    # result = process_latest_video_from_gcs(folder_id)
+    # if result and result['success']:
+    #     print(f"Processed: {result['filename']}")
+    #     print(f"Size: {result['size_bytes']} bytes")
+    #     print(f"Created: {result['created_time']}")
+    #     print(f"GCS Path: {result['gcs_path']}")
+    #     print(f"Context: {result['context'][:200]}...")
+    
+    # ===== LOCAL FILE EXAMPLES (for reference) =====
+    # Example 4: Process a single local video file
+    # context = process_video_file("path/to/your/video.mp4")
+    # print("Extracted Context:", context)
+    
+    # Example 5: Process all videos in a local directory
+    # results = process_video_directory("path/to/video/directory")
+    # for result in results:
+    #     print(f"File: {result['filename']}")
+    #     print(f"Success: {result['success']}")
+    #     if result['context']:
+    #         print(f"Context: {result['context'][:200]}...")
+    #     print("-" * 50)
+
+if __name__ == "__main__":
+    main()

@@ -4,7 +4,7 @@ import sys
 import json
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 load_dotenv()
 from openai import OpenAI
@@ -122,7 +122,6 @@ def format_search_results(search_results):
 from portfolio_generator.gcs_video_context_generator import generate_context_from_latest_video
 
 async def _run_improvement_logic(document_id: str, annotations: list, weight_changes: list, position_count: int = None):
-    from datetime import datetime
     # Step 0a: Generate video context from GCS
     try:
         video_context = generate_context_from_latest_video(document_id)
@@ -167,7 +166,7 @@ async def _run_improvement_logic(document_id: str, annotations: list, weight_cha
         # Upload the new scratchpad
         col.document(document_id).set({
             "scratchpad": scratchpad_text,
-            "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "is_latest": True
         })
         log_success(f"Uploaded scratchpad feedback for document {document_id} to 'alternative-portfolio-scratchpad'.")

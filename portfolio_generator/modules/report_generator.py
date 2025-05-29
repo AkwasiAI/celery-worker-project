@@ -18,7 +18,7 @@ from portfolio_generator.modules.search_utils import format_search_results
 from portfolio_generator.modules.section_generator import generate_section, generate_section_with_web_search
 from portfolio_generator.modules.structured_section_generator import generate_structured_executive_summary
 from portfolio_generator.modules.portfolio_generator import generate_portfolio_json
-from portfolio_generator.modules.report_upload import upload_report_to_firestore, generate_and_upload_alternative_report
+from portfolio_generator.modules.report_upload import upload_report_to_firestore
 from portfolio_generator.web_search import PerplexitySearch
 from google.cloud import firestore
 from portfolio_generator.firestore_downloader import FirestoreDownloader
@@ -27,6 +27,13 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 import os
 from google import genai
 from google.genai import types
+from portfolio_generator.modules.another import run_full_news_agent
+from portfolio_generator.modules.portfolio_generation_agent2 import generate_portfolio_executive_summary
+from portfolio_generator.modules.news_update_generator import generate_news_update_section
+from portfolio_generator.modules.utils import news_digest_json_to_markdown, clean_markdown_block
+from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, predict_tomorrow
+from portfolio_generator.modules.alternative_portfolio_generator import generate_and_upload_alternative_report
+
 
 # New helper for Gemini sanitization, using the google-genai SDK
 def sanitize_report_content_with_gemini(report_content: str) -> str:
@@ -231,56 +238,70 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             "Geopolitical Events"
         ]
         
-        # Define detailed queries with investment principles context - identical to original
-        category_queries = {
-            "Shipping": [f"Provide an in depth analysis of shipping news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Commodities": [f"Provide an in depth analysis of commodities market news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Central Bank Policies": [f"Provide an in depth analysis of central bank policy news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Macroeconomic News": [f"Provide an in depth analysis of macroeconomic news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
-            "Geopolitical Events": [f"Provide an in depth analysis of geopolitical events news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"]
-        }
+        # # Define detailed queries with investment principles context - identical to original
+        # category_queries = {
+        #     "Shipping": [f"Provide an in depth analysis of shipping news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+        #     "Commodities": [f"Provide an in depth analysis of commodities market news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+        #     "Central Bank Policies": [f"Provide an in depth analysis of central bank policy news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+        #     "Macroeconomic News": [f"Provide an in depth analysis of macroeconomic news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+        #     "Global Trade & Tariffs": [f"Provide an in depth analysis of global trade and tariffs news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"],
+        #     "Geopolitical Events": [f"Provide an in depth analysis of geopolitical events news within the last 24 hours from now (as of {datetime.now().strftime('%B %Y')}) in light of the following investment principles: {investment_principles}"]
+        # }
         
         # Build the flat search_queries list and categories index list - exactly as in original
-        categories = []
-        search_queries = []
-        start = 0
-        for cat in category_order:
-            queries = category_queries.get(cat, [])
-            n = len(queries)
-            end = start + n
-            categories.append((cat, start, end))
-            search_queries.extend(queries)
-            start = end
+        # categories = []
+        # search_queries = []
+        # start = 0
+        # for cat in category_order:
+        #     queries = category_queries.get(cat, [])
+        #     n = len(queries)
+        #     end = start + n
+        #     categories.append((cat, start, end))
+        #     search_queries.extend(queries)
+        #     start = end
+        try:
+            evaluate_yesterday()
+            log_success("Successfully evaluated yesterday's update")
+        except Exception as e:
+            log_error(f"Exception running the 100 ticker evals: {e}")
+
+        try:
+            predict_tomorrow()
+            log_success("Successfully Forecasted tomorrow's update")
+        except Exception as e:
+            log_error(f"Exception running the 100 ticker evals: {e}")
         
         try:
             # Execute searches using identical approach as original
-            log_info(f"Executing {len(search_queries)} web searches...")
-            search_results = await search_client.search(search_queries, investment_principles)
-            
+            # log_info(f"Executing {len(search_queries)} web searches...")
+            llm_corpora = await run_full_news_agent()
+            # Generate the news section - directly await the async function
+            news_section = news_digest_json_to_markdown()
+            search_results = list(llm_corpora.values())
+            formatted_search_results = format_search_results(search_results) if search_results else ""
+
             # Display detailed results of each web search for debugging - matching original logic
-            for i, result in enumerate(search_results):
-                result_str = str(result)
+            # for i, result in enumerate(search_results):
+            #     result_str = str(result)
                 
-                # With the new API approach, check if the results list contains content
-                if result.get("results") and len(result["results"]) > 0 and "content" in result["results"][0]:
-                    content_preview = result["results"][0]["url"][:100]
-                    log_success(f"Search {i+1} successful: '{result['query']}' → {content_preview}...")
-                elif "error" in result:
-                    log_error(f"Search {i+1} failed: {result.get('error', 'Unknown error')}")
-                else:
-                    log_warning(f"Search {i+1} returned empty or unexpected format: {result_str[:150]}")
+            #     # With the new API approach, check if the results list contains content
+            #     if result.get("results") and len(result["results"]) > 0 and "content" in result["results"][0]:
+            #         content_preview = result["results"][0]["url"][:100]
+            #         log_success(f"Search {i+1} successful: '{result['query']}' → {content_preview}...")
+            #     elif "error" in result:
+            #         log_error(f"Search {i+1} failed: {result.get('error', 'Unknown error')}")
+            #     else:
+            #         log_warning(f"Search {i+1} returned empty or unexpected format: {result_str[:150]}")
             
             # Check the quality of search results - matching original logic
-            successful_searches = sum(1 for r in search_results if r.get("results") and len(r["results"]) > 0 and "content" in r["results"][0])
-            failed_searches = len(search_results) - successful_searches
+            successful_searches = len(search_results)
+            failed_searches = 0 #len(search_results) - successful_searches
             
             if failed_searches == len(search_results):
                 log_error("All search queries failed to return useful content.")
                 log_warning("Automatically continuing without web search data (containerized mode)")
             elif failed_searches > 0:
                 log_warning(f"{failed_searches} out of {len(search_results)} searches failed to return useful content.")
-            model="o4-mini"  # Use Claude's o4-mini model - matching original logic
             has_errors = failed_searches > (len(search_results) / 2)  # More than half failed
             
             if has_errors:
@@ -306,7 +327,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             formatted_search_results = ""
             log_warning("Web search exception. Report will not include current data.")
         
-        log_info(f"Completed {len(search_results)} successful searches out of {len(search_queries)} queries")
+        log_info(f"Completed {len(search_results)} successful searches out of {len(category_order)} queries")
     else:
         log_warning("No search client available. Proceeding without web search data.")
     
@@ -329,7 +350,9 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         total_word_count=total_word_count,
         current_year=current_year,
         next_year=next_year,
-        priority_period=priority_period
+        priority_period=priority_period,
+        current_date = current_date
+
     )
     
     # 1. Generate Executive Summary - using the imported prompt
@@ -349,89 +372,109 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     log_info("Generating Executive Summary with structured schema and o4-mini model...")
     try:
         # Create a more focused system prompt specifically for executive summary generation
-        executive_summary_system_prompt = """You are an expert investment analyst creating a structured portfolio executive summary. 
-Your primary task is to generate a well-formatted investment portfolio with asset positions, allocation percentages, 
-and a forward-looking market analysis. 
+        # executive_summary_system_prompt = """You are an expert investment analyst creating a structured portfolio executive summary. 
+        #     Your primary task is to generate a well-formatted investment portfolio with asset positions, allocation percentages, 
+        #     and a forward-looking market analysis. 
 
-YOU MUST FOLLOW THE USER'S INSTRUCTIONS EXACTLY to create a valid portfolio summary. 
-Do not create a news analysis or describe current events - create a forward-looking portfolio.
+        #     YOU MUST FOLLOW THE USER'S INSTRUCTIONS EXACTLY to create a valid portfolio summary. 
+        #     Do not create a news analysis or describe current events - create a forward-looking portfolio.
 
-You MUST include a table of portfolio positions AND hidden JSON in HTML comments."""
+        #     You MUST include a table of portfolio positions AND hidden JSON in HTML comments."""
         
         # Separate and limit the search results to prevent them from dominating the prompt
         if formatted_search_results and isinstance(formatted_search_results, str):
             log_info("Processing search results for executive summary...")
             
-            # Extract only small snippets of market data from the search results
-            extracted_market_insights = """
-*** REFERENCE MARKET INSIGHTS (DO NOT COPY DIRECTLY) ***
+#             # Extract only small snippets of market data from the search results
+#             extracted_market_insights = """
+# *** REFERENCE MARKET INSIGHTS (DO NOT COPY DIRECTLY) ***
 
-Use these high-level market trends ONLY to inform your portfolio construction:
-"""
+# Use these high-level market trends ONLY to inform your portfolio construction:
+# """
             
-            # Split by newlines and extract only short key insights
-            search_lines = formatted_search_results.split('\n')
-            extracted_lines = []
+#             # Split by newlines and extract only short key insights
+#             search_lines = formatted_search_results.split('\n')
+#             extracted_lines = []
             
-            # Add just enough market context without overwhelming the prompt
-            energy_added = shipping_added = commodity_added = geopolitical_added = False
-            for line in search_lines[:20]:  # Limit to first 20 lines
-                if ('energy' in line.lower() or 'oil' in line.lower()) and not energy_added:
-                    extracted_lines.append("- Energy markets: " + line[:60] + "...")
-                    energy_added = True
-                elif ('shipping' in line.lower() or 'tanker' in line.lower()) and not shipping_added:
-                    extracted_lines.append("- Shipping rates: " + line[:60] + "...")
-                    shipping_added = True
-                elif ('commodity' in line.lower() or 'metal' in line.lower()) and not commodity_added:
-                    extracted_lines.append("- Commodities: " + line[:60] + "...")
-                    commodity_added = True
-                elif ('geopolitical' in line.lower() or 'event' in line.lower()) and not geopolitical_added:
-                    extracted_lines.append("- Geopolitical events: " + line[:60] + "...")
-                    geopolitical_added = True
+#             # Add just enough market context without overwhelming the prompt
+#             energy_added = shipping_added = commodity_added = geopolitical_added = False
+#             for line in search_lines[:20]:  # Limit to first 20 lines
+#                 if ('energy' in line.lower() or 'oil' in line.lower()) and not energy_added:
+#                     extracted_lines.append("- Energy markets: " + line[:60] + "...")
+#                     energy_added = True
+#                 elif ('shipping' in line.lower() or 'tanker' in line.lower()) and not shipping_added:
+#                     extracted_lines.append("- Shipping rates: " + line[:60] + "...")
+#                     shipping_added = True
+#                 elif ('commodity' in line.lower() or 'metal' in line.lower()) and not commodity_added:
+#                     extracted_lines.append("- Commodities: " + line[:60] + "...")
+#                     commodity_added = True
+#                 elif ('geopolitical' in line.lower() or 'event' in line.lower()) and not geopolitical_added:
+#                     extracted_lines.append("- Geopolitical events: " + line[:60] + "...")
+#                     geopolitical_added = True
             
-            if extracted_lines:
-                extracted_market_insights += "\n" + "\n".join(extracted_lines) + "\n\n"
-            else:
-                extracted_market_insights += "\n- Limited market data available. Focus on diversified portfolio construction.\n\n"
+#             if extracted_lines:
+#                 extracted_market_insights += "\n" + "\n".join(extracted_lines) + "\n\n"
+#             else:
+#                 extracted_market_insights += "\n- Limited market data available. Focus on diversified portfolio construction.\n\n"
                 
-            # Add strong reminder about task priority
-            extracted_market_insights += """CRITICAL: Your primary task is to create a FORWARD-LOOKING INVESTMENT PORTFOLIO with positions in a table and JSON format.
-DO NOT create a news article or summary about global trade & tariffs or any other topic.
-Focus on proper portfolio construction as specified in the instructions."""
+#             # Add strong reminder about task priority
+#             extracted_market_insights += """CRITICAL: Your primary task is to create a FORWARD-LOOKING INVESTMENT PORTFOLIO with positions in a table and JSON format.
+# DO NOT create a news article or summary about global trade & tariffs or any other topic.
+# Focus on proper portfolio construction as specified in the instructions."""
             
-            log_info("Created focused market insights for executive summary guidance")
-        else:
-            extracted_market_insights = """No market data available. Create a diversified portfolio based on 
-forward-looking expectations for energy, shipping, and commodity markets."""
+#             log_info("Created focused market insights for executive summary guidance")
+#         else:
+#             extracted_market_insights = """No market data available. Create a diversified portfolio based on 
+# forward-looking expectations for energy, shipping, and commodity markets."""
         
-        # Combine the executive summary prompt with the extracted insights
-        complete_exec_summary_prompt = exec_summary_prompt + "\n\n" + extracted_market_insights
+#         # Combine the executive summary prompt with the extracted insights
+#         complete_exec_summary_prompt = exec_summary_prompt + "\n\n" + extracted_market_insights
         
         # Use the structured executive summary generator with focused prompts
         log_info("Generating executive summary with strict portfolio focus...")
-        structured_response = await generate_structured_executive_summary(
-            client=client,
-            system_prompt=executive_summary_system_prompt,  # Use the focused system prompt
-            user_prompt=complete_exec_summary_prompt,
-            search_results=None,  # Don't pass raw search results directly
-            previous_sections={},  # Empty dictionary for previous sections
-            target_word_count=per_section_word_count,
-            model="o4-mini"
-        )
+
+
+        # structured_response = await generate_structured_executive_summary(
+        #     client=client,
+        #     system_prompt=executive_summary_system_prompt,  # Use the focused system prompt
+        #     user_prompt=complete_exec_summary_prompt,
+        #     search_results=None,  # Don't pass raw search results directly
+        #     previous_sections={},  # Empty dictionary for previous sections
+        #     target_word_count=per_section_word_count,
+        #     model="o4-mini"
+        # )
+
+        firebase_downloader = FirestoreDownloader()
+        previous_portfolio = firebase_downloader.get_latest("portfolio_weights")
+
+        structured_response = await generate_portfolio_executive_summary(
+                            llm_corpus_content=formatted_search_results, # Replace with your actual data
+                            previous_portfolio_data=previous_portfolio, # Replace with your actual data
+                            fully_formatted_base_prompt=base_system_prompt,
+                            fully_formatted_exec_detailed_prompt=exec_summary_prompt,
+                            max_iterations=2,
+                        )
         
         # Store the markdown summary in the report sections
-        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = structured_response.summary
+        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = clean_markdown_block(structured_response["summary"])
         
         # Extract the validated portfolio positions
-        portfolio_positions = [position.dict() for position in structured_response.portfolio_positions]
-        portfolio_json = json.dumps(portfolio_positions, indent=2)
+        # portfolio_positions = [position.dict() for position in structured_response.portfolio_positions]
+        # portfolio_json = json.dumps(portfolio_positions, indent=2)
+
+        portfolio_json = structured_response["portfolio_positions"]
+        portfolio_positions = json.loads(portfolio_json)
         
         # Log success with position details
         log_info(f"Successfully generated structured Executive Summary with {len(portfolio_positions)} validated portfolio positions.")
-        
-        # Add the JSON back to the executive summary for backwards compatibility with any code that expects it there
-        json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
-        report_sections["Executive Summary - Comprehensive Portfolio Summary"] += f"\n\n{json_comment}"
+
+        with open('scratchpads/portfolio_gen_scratchpad.json', 'r') as f:
+            portfolio_scratchpad = json.load(f)
+
+        log_info(f"Successfully got the portfolio scratchpad, There are: {len(portfolio_scratchpad)} conversations inside")
+        # # Add the JSON back to the executive summary for backwards compatibility with any code that expects it there
+        # json_comment = f"<!-- PORTFOLIO_POSITIONS_JSON:\n{portfolio_json}\n-->"
+        # report_sections["Executive Summary - Comprehensive Portfolio Summary"] += f"\n\n{json_comment}"
         
         # Increment the completed sections counter
         completed_sections += 1
@@ -445,7 +488,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         enhanced_exec_summary_prompt = exec_summary_prompt + "\n\nCRITICAL REQUIREMENT: You MUST include a valid JSON array of all portfolio positions inside an HTML comment block, formatted EXACTLY as follows:\n<!-- PORTFOLIO_POSITIONS_JSON:\n[\n  {\"asset\": \"TICKER\", \"position_type\": \"LONG/SHORT\", \"allocation_percent\": X, \"time_horizon\": \"PERIOD\", \"confidence_level\": \"LEVEL\"},\n  ...\n]\n-->\nThis hidden JSON is essential for downstream processing and MUST be included exactly as specified, even when using web search."
         
         # Generate Executive Summary using standard generation without web search as fallback
-        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = await generate_section(
+        report_sections["Executive Summary - Comprehensive Portfolio Summary"] = await generate_section_with_web_search(
             client=client,
             section_name="Executive Summary - Comprehensive Portfolio Summary",
             system_prompt=base_system_prompt,
@@ -512,7 +555,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 2. Generate Global Trade & Economy section
     global_economy_prompt = GLOBAL_TRADE_ECONOMY_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Global Trade & Economy"] = await generate_section(
+    report_sections["Global Trade & Economy"] = await generate_section_with_web_search(
         client,
         "Global Trade & Economy",
         base_system_prompt,
@@ -529,7 +572,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 3. Generate Energy Markets section
     energy_markets_prompt = ENERGY_MARKETS_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Energy Markets"] = await generate_section(
+    report_sections["Energy Markets"] = await generate_section_with_web_search(
         client,
         "Energy Markets",
         base_system_prompt,
@@ -546,7 +589,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 4. Generate Commodities section
     commodities_prompt = COMMODITIES_MARKETS_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Commodities Markets"] = await generate_section(
+    report_sections["Commodities Markets"] = await generate_section_with_web_search(
         client,
         "Commodities Markets",
         base_system_prompt,
@@ -563,7 +606,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 5. Generate Shipping section
     shipping_prompt = SHIPPING_INDUSTRY_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Shipping Industry"] = await generate_section(
+    report_sections["Shipping Industry"] = await generate_section_with_web_search(
         client,
         "Shipping Industry",
         base_system_prompt,
@@ -598,7 +641,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 7. Generate Benchmarking & Performance section
     benchmarking_prompt = BENCHMARKING_PERFORMANCE_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Benchmarking & Performance"] = await generate_section(
+    report_sections["Benchmarking & Performance"] = await generate_section_with_web_search(
         client,
         "Benchmarking & Performance",
         base_system_prompt,
@@ -615,7 +658,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 8. Generate Risk Assessment section
     risk_prompt = RISK_ASSESSMENT_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Risk Assessment"] = await generate_section(
+    report_sections["Risk Assessment"] = await generate_section_with_web_search(
         client,
         "Risk Assessment",
         base_system_prompt,
@@ -632,7 +675,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 9. Generate Conclusion & Outlook section
     conclusion_prompt = CONCLUSION_OUTLOOK_PROMPT.format(per_section_word_count=per_section_word_count)
 
-    report_sections["Conclusion & Outlook"] = await generate_section(
+    report_sections["Conclusion & Outlook"] = await generate_section_with_web_search(
         client,
         "Conclusion & Outlook",
         base_system_prompt,
@@ -649,7 +692,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # 10. Generate References & Sources section
     references_prompt = REFERENCES_SOURCES_PROMPT
 
-    report_sections["References & Sources"] = await generate_section(
+    report_sections["References & Sources"] = await generate_section_with_web_search(
         client,
         "References & Sources",
         base_system_prompt,
@@ -670,7 +713,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         old_portfolio_weights=prev_allocation_weights,
         current_portfolio_weights=portfolio_json
     )
-    report_sections["Executive Summary - Allocation"] = await generate_section(
+    report_sections["Executive Summary - Allocation"] = await generate_section_with_web_search(
         client,
         "Executive Summary - Allocation",
         base_system_prompt,
@@ -688,7 +731,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         old_portfolio_weights=prev_allocation_weights,
         current_portfolio_weights=portfolio_json
     )
-    report_sections["Executive Summary - Insights"] = await generate_section(
+    report_sections["Executive Summary - Insights"] = await generate_section_with_web_search(
         client,
         "Executive Summary - Insights",
         base_system_prompt,
@@ -702,8 +745,8 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     log_info(f"Completed section {completed_sections}/{total_sections}: Executive Summary - Insights")
     
     # Combine all sections into a single report
-    report_content = f"""# Investment Portfolio Report
-**Date: {current_date}, Report generation completed at Time: {datetime.now().strftime('%H:%M:%S')}, Athens Time.**
+    report_content = f"""# Standard Report
+**Date and time last ran: {current_date}, @ {datetime.now().strftime('%H:%M:%S')} (Athens Time).**
 
 """
     
@@ -716,7 +759,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     # Extract portfolio data from the report
     log_info("Extracting portfolio data from generated report sections...")
     # --- News Update Section (LLM-powered) ---
-    from portfolio_generator.news_update_generator import generate_news_update_section
     
     # Define news categories order
     category_order = [
@@ -755,12 +797,11 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         }
             
         # Build the flat search_queries list and categories index list
-        search_queries = []
-        for cat_name in category_order:
-            search_queries.extend(category_queries[cat_name])
+        # search_queries = []
+        # for cat_name in category_order:
+        #     search_queries.extend(category_queries[cat_name])
         
         # Generate the news update section
-        from portfolio_generator.modules.news_update_generator import generate_news_update_section
         
         # Prepare search results in the correct format for the news update generator
         search_results_list = []
@@ -793,24 +834,15 @@ forward-looking expectations for energy, shipping, and commodity markets."""
                     })
         
         # Prepare categories in the correct format (tuple of name, start_idx, end_idx)
-        formatted_categories = []
-        start_idx = 0
-        for cat_name in category_order:
-            cat_queries = category_queries[cat_name]
-            end_idx = start_idx + len(cat_queries)
-            formatted_categories.append((cat_name, start_idx, end_idx))
-            start_idx = end_idx
+        # formatted_categories = []
+        # start_idx = 0
+        # for cat_name in category_order:
+        #     cat_queries = category_queries[cat_name]
+        #     end_idx = start_idx + len(cat_queries)
+        #     formatted_categories.append((cat_name, start_idx, end_idx))
+        #     start_idx = end_idx
         
-        new_categories_akwasi = ["Shipping","Commodities","Central Bank Policies","Macroeconomic News","Global Trade & Tariffs","Geopolitical Events"]
-        
-        # Generate the news section - directly await the async function
-        news_section = await generate_news_update_section(
-            client=client,
-            search_results=formatted_search_results,
-            investment_principles=investment_principles,
-            categories=new_categories_akwasi,
-            model="o4-mini" 
-        )
+        # new_categories_akwasi = ["Shipping","Commodities","Central Bank Policies","Macroeconomic News","Global Trade & Tariffs","Geopolitical Events"]
         
         # Store news section in report_sections dictionary
         if news_section:
@@ -825,12 +857,12 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         "Executive Summary - Allocation",
         "Executive Summary - Insights",
         "Executive Summary - Comprehensive Portfolio Summary",
-        "Global Trade & Economy",
-        "Energy Markets",
-        "Commodities Markets",
-        "Shipping Industry",
-        "Conclusion & Outlook",
-        "References & Sources"
+        # "Global Trade & Economy",
+        # "Energy Markets",
+        # "Commodities Markets",
+        # "Shipping Industry",
+        # "Conclusion & Outlook",
+        # "References & Sources"
     ]
     
     # Add sections in order
@@ -850,7 +882,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             }
         }
 
-        firebase_downloader = FirestoreDownloader()
         old_portfolio_weights = firebase_downloader.get_latest("portfolio_weights")
         
         log_info(f"Old portfolio weights: {old_portfolio_weights}")
@@ -865,8 +896,6 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             search_client,
             formatted_search_results
         )
-        
-        log_info("Generated portfolio weights JSON")
 
         # method to calculate benchmark metrics using portfolio_json
         from portfolio_generator.modules.benchmark_metrics import calculate_benchmark_metrics
@@ -876,6 +905,9 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             current_date
         )
         log_info(f"Calculated benchmark metrics: {calculated_metrics_json}")
+
+        # portfolio_json = portfolio_positions
+        log_info("Using already generated portfolio weights JSON")
 
         # upload calculated metrics to firestore under a new collection called "benchmark_metrics"
         from portfolio_generator.modules.report_upload import FirestoreUploader
@@ -902,6 +934,86 @@ forward-looking expectations for energy, shipping, and commodity markets."""
     except Exception as e:
         log_error(f"Error generating portfolio JSON: {e}")
         portfolio_json = json.dumps(default_portfolio)
+
+    try:
+
+        # log_info("Currently combining news content")
+        # news_blocks = []
+        # for topic, text in llm_corpora.items():
+        #     header = f"======= {topic} ======="
+        #     body = text.strip()
+        #     news_blocks.append(f"{header}\n{body}\n")
+
+        # news_text = "\n".join(news_blocks)  
+
+        # log_info("Completed combining news content") 
+
+        # upload news scratchpad to firestore, under a new collection called "news_scratchpad"
+        uploader_nc = FirestoreUploader()
+        nc_col = uploader_nc.db.collection("news_scratchpad")
+        try:
+            nc_q = nc_col.filter("doc_type", "==", "news_scratchpad").filter("is_latest", "==", True)
+        except AttributeError:
+            nc_q = nc_col.where(filter=FieldFilter("doc_type", "==", "news_scratchpad")).where(filter=FieldFilter("is_latest", "==", True))
+        for doc in nc_q.stream():
+            nc_col.document(doc.id).update({"is_latest": False})
+        nc_ref = nc_col.document()
+        nc_ref.set({
+            "llm_corpora_json": llm_corpora,
+            "doc_type": "news_scratchpad",
+            "file_format": "json",
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "is_latest": True,
+            "source_report_id": firestore_report_doc_id,
+            "created_at": datetime.now(timezone.utc),
+            "total_content": news_section
+
+        })
+        log_success(f"Benchmark metrics uploaded with id: {nc_ref.id}")
+    except Exception as e:
+        log_error(f"Error uploading the news scratchpad to Firebase: {e}")
+
+
+    try:
+        log_info("Currently combining portfolio content")
+
+        portfolio_blocks = []
+        for entry in portfolio_scratchpad:
+            for key in ["actor", "message", "feedback", "decision_text", "output_markdown"]:
+                if key in entry and entry[key]:
+                    header = f"======= {entry.get('actor', key)} ======="
+                    body = entry[key].strip()
+                    portfolio_blocks.append(f"{header}\n{body}\n")
+
+        portfolio_text = "\n".join(portfolio_blocks)
+
+        log_info("Completed combining portfolio content")
+
+
+        # upload portfolio scratchpad to firestore, under a new collection called "portfolio_scratchpad"
+        uploader_ps = FirestoreUploader()
+        pscol = uploader_ps.db.collection("portfolio_scratchpad")
+        try:
+            psq = pscol.filter("doc_type", "==", "portfolio_scratchpad").filter("is_latest", "==", True)
+        except AttributeError:
+            psq = pscol.where(filter=FieldFilter("doc_type", "==", "portfolio_scratchpad")).where(filter=FieldFilter("is_latest", "==", True))
+        for doc in psq.stream():
+            pscol.document(doc.id).update({"is_latest": False})
+        psref = pscol.document()
+        psref.set({
+            "portfolio_scratchpad_json": portfolio_scratchpad,
+            "doc_type": "portfolio_scratchpad",
+            "file_format": "json",
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "is_latest": True,
+            "source_report_id": firestore_report_doc_id,
+            "created_at": datetime.now(timezone.utc),
+            "total_content": portfolio_text
+        })
+        log_success(f"Benchmark metrics uploaded with id: {psref.id}")
+    except Exception as e:
+        log_error(f"Error uploading the news scratchpad to Firebase: {e}")
+
 
     # sanitize report content via Gemini
     report_content = sanitize_report_content_with_gemini(report_content)
@@ -940,14 +1052,23 @@ forward-looking expectations for energy, shipping, and commodity markets."""
                         portfolio_json
                     )
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
+
+                    try:
+                        old_alternative_portfolio_weights = firestore_downloader.get_latest("portfolio-weights-alternative")
+                        log_success(f"Successfully Pulled Old Alternative portfolio weights")
+                    except:
+                        old_alternative_portfolio_weights = None
+                        log_warning("Could not pull Old Alternative portfolio weights")
                     
                     # Generate and upload alternative report for ePubs
                     await generate_and_upload_alternative_report(
-                        report_content,
-                        firestore_report_doc_id,
-                        client,
-                        investment_principles=investment_principles,
-                        search_results=formatted_search_results
+                        current_report_content_md = report_content,
+                        current_report_firestore_id = firestore_report_doc_id,
+                        gemini_model_name="gemini-2.5-pro-preview-05-06",
+                        google_api_key=os.environ.get("GEMINI_API_KEY"),
+                        investment_principles_str=investment_principles,
+                        llm_news_corpus_str=formatted_search_results,
+                        previous_report_portfolio_json_str=old_alternative_portfolio_weights
                     )
                     
                     log_success("Report generation completed successfully!")
@@ -976,7 +1097,7 @@ forward-looking expectations for energy, shipping, and commodity markets."""
         
         performance_prompt = PERFORMANCE_ANALYSIS_PROMPT.format(per_section_word_count=per_section_word_count, old_portfolio_weights=old_portfolio_weights, current_portfolio_weights=portfolio_json)
 
-        report_sections["Performance Analysis"] = await generate_section(
+        report_sections["Performance Analysis"] = await generate_section_with_web_search(
             client,
             "Performance Analysis",
             base_system_prompt,
@@ -1016,6 +1137,26 @@ forward-looking expectations for energy, shipping, and commodity markets."""
             log_success(f"Risk & Benchmark report uploaded with id: {rb_ref.id}")
     except Exception as e_rb:
         log_warning(f"Failed to upload Risk & Benchmark report: {e_rb}")
+
+    try:
+
+        # List of your JSON files
+        files_to_delete = [
+                    "scratchpads/portfolio_gen_scratchpad.json",
+                    "news_human_digests.json",
+                    "news_llm_corpora.json",
+                    "processed_seen_urls.json"
+                           ]
+
+        for file in files_to_delete:
+            if os.path.exists(file):
+                os.remove(file)
+                print(f"Deleted: {file}")
+            else:
+                print(f"File not found, skipping: {file}")
+        log_success(f"Successfully cleared old files: digests and scratchpad")
+    except Exception as e_rb:
+        log_warning(f"Failed to Clear existing digests and scratchpad")
     
     # Return the report content
     return {

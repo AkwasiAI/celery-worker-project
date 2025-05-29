@@ -48,3 +48,30 @@ def infer_region_from_asset(asset_name):
         return "Africa"
     else:
         return "Global"
+
+
+import json
+
+def news_digest_json_to_markdown() -> str:
+    with open("news_human_digests.json", "r", encoding="utf-8") as f:
+        digest = json.load(f)
+    lines = ["# Executive Summary - News Update\n"]
+    for category, news in digest.items():
+        # Only print categories that aren't error messages
+        if news.strip().lower().startswith("error processing"):
+            lines.append(f"## {category}\nError fetching news for this category.\n")
+            continue
+
+        lines.append(f"## {category}\n")
+        # News field is already a markdown string per news item
+        lines.append(news)
+        lines.append("")  # Blank line between categories
+    return "\n".join(lines)
+
+def clean_markdown_block(text):
+    lines = text.strip().splitlines()
+    if lines and lines[0].strip().startswith("```"):
+        lines = lines[1:]  # remove opening ```
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]  # remove closing ```
+    return "\n".join(lines).strip()

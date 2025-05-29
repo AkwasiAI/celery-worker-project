@@ -35,17 +35,21 @@ def say_hello(self, name: str):
 
 
 @celery_app.task(name="tasks.improve_report_with_feedback", bind=True)
-def improve_report_with_feedback(self, document_id: str, annotations: list = None, weight_changes: list = None, position_count: int = None):
+def improve_report_with_feedback(self, document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None):
     """
     Celery task to improve a report using OpenAI based on annotations AND weight changes, using the provided original report content.
     Incorporates web search and saves the improved report back to Firestore.
     
     Args:
         document_id: The Firestore document ID of the report to improve
+        report_date: The date of the report in YYYY-MM-DD format
         annotations: List of annotation objects containing text snippets, comments, and sentiment
+        timestamp: The timestamp when the request was made in ISO format
+        video_url: URL to a video resource associated with the report, if any
         weight_changes: List of weight change objects with asset name, ticker, old weight, and new weight
         position_count: The required number of portfolio positions to enforce in the improved report
-        original_report_content: The original report text to be improved (required)
+        manual_upload: Dictionary containing details about manually uploaded files
+        chat_history: List of chat message objects containing role, content, and timestamp
     
     Returns:
         Dict containing success message, document ID, and runtime information
@@ -57,6 +61,7 @@ def improve_report_with_feedback(self, document_id: str, annotations: list = Non
     # Ensure we have list objects, even if None was provided
     annotations = annotations or []
     weight_changes = weight_changes or []
+    chat_history = chat_history or []
     
     if not REPORT_IMPROVER_AVAILABLE:
         error_msg = "Report improver module is not available. Cannot process the task."
@@ -67,7 +72,7 @@ def improve_report_with_feedback(self, document_id: str, annotations: list = Non
 
     try:
         # Run the async improvement logic using asyncio
-        result = asyncio.run(_run_improvement_logic(document_id, annotations, weight_changes, position_count))
+        result = asyncio.run(_run_improvement_logic(document_id, report_date, annotations, timestamp, video_url, weight_changes, position_count, manual_upload, chat_history))
         
         logger.info(f"Task {task_id}: Successfully improved report {document_id} in {result.get('runtime_seconds', 0)} seconds")
         print(f"Task {task_id}: Successfully improved report {document_id} in {result.get('runtime_seconds', 0)} seconds")

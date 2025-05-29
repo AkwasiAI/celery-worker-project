@@ -121,20 +121,35 @@ def format_search_results(search_results):
 
 from portfolio_generator.gcs_video_context_generator import generate_context_from_latest_video
 
-async def _run_improvement_logic(document_id: str, annotations: list, weight_changes: list, position_count: int = None):
-    # Step 0a: Generate video context from GCS
+async def _run_improvement_logic(document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None):
+    # Step 0a: Generate video context from GCS or use provided video URL
     try:
+        # Store the video URL in the context even if we don't process it yet
+        video_url_context = f"Video URL: {video_url}\n" if video_url else ""
+        
+        # Generate context from the latest video in GCS
         video_context = generate_context_from_latest_video(document_id)
+        
         if video_context:
             log_info(f"Video context successfully generated for document_id {document_id}. Context length: {len(video_context)} characters.")
         else:
             log_info(f"No video context generated for document_id {document_id}.")
+            
+        # Add the video URL to the context if it was provided
+        if video_url:
+            log_info(f"Adding video URL to context: {video_url}")
+            video_context = f"{video_url_context}\n{video_context}"
     except Exception as e:
         log_warning(f"Failed to generate video context for document_id {document_id}: {e}")
-        video_context = ""
+        # Still include the video URL even if context generation failed
+        video_context = video_url_context if video_url else ""
     # --- Extract scratchpad feedback and upload to Firestore ---
     video_feedback_section = f"=====VideoFeedback=====\n{video_context}"
     portfolio_feedback_section = "=====PortfolioFeedback=====\n"
+    
+    # Add report date if available
+    if report_date:
+        portfolio_feedback_section += f"Report Date: {report_date}\n\n"
     if annotations:
         for i, anno in enumerate(annotations, 1):
             text = anno.get("original_text") or anno.get("text", "")
@@ -155,6 +170,24 @@ async def _run_improvement_logic(document_id: str, annotations: list, weight_cha
             old_w = wc.get("oldWeight") or wc.get("old_weight", "")
             new_w = wc.get("newWeight") or wc.get("new_weight", "")
             portfolio_feedback_section += f"{i}. {asset} ({ticker}): {old_w} -> {new_w}\n"
+    # Add manual upload info if available
+    if manual_upload:
+        manual_upload_section = "=====ManualUpload=====\n"
+        upload_type = manual_upload.get("type", "unknown")
+        file_type = manual_upload.get("fileType", "unknown")
+        manual_upload_section += f"Type: {upload_type}\nFile Type: {file_type}\n"
+        portfolio_feedback_section += f"\n{manual_upload_section}\n"
+    
+    # Add chat history if available
+    if chat_history and len(chat_history) > 0:
+        chat_history_section = "=====ChatHistory=====\n"
+        for msg in chat_history:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            msg_timestamp = msg.get("timestamp", "")
+            chat_history_section += f"[{role} - {msg_timestamp}]\n{content}\n\n"
+        portfolio_feedback_section += f"\n{chat_history_section}\n"
+    
     scratchpad_text = f"{video_feedback_section}\n\n{portfolio_feedback_section}"
     try:
         uploader = EnhancedFirestoreUploader()
@@ -166,7 +199,7 @@ async def _run_improvement_logic(document_id: str, annotations: list, weight_cha
         # Upload the new scratchpad
         col.document(document_id).set({
             "scratchpad": scratchpad_text,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
             "is_latest": True
         })
         log_success(f"Uploaded scratchpad feedback for document {document_id} to 'alternative-portfolio-scratchpad'.")

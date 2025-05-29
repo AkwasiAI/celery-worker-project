@@ -37,6 +37,7 @@ old/
 .github_token
 hedgefundintelligence-1efd159a68ef.json
 firebase_credentials.json
+gcloud-service-account-key.json
 
 # Editor config
 .idea/

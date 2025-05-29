@@ -4,7 +4,6 @@ import requests
 import time
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
-from portfolio_generator.modules.logging import log_info
 
 
 class PerplexitySearch:
@@ -55,9 +54,9 @@ class PerplexitySearch:
             allowed_domains = [
                 "bloomberg.com",           # Bloomberg: Global / Macro news
                 "aljazeera.com",           # Aljazeera: Global / Geopolitics
-                "reuters.com",             # Reuters: Global / Macro news
+                "tradewindsnews.com",      # Tradewinds: Shipping News
                 "lloydslist.com",          # Lloyd's List: Shipping News
-                "ft.com",                  # Financial Times: Global / Macro news
+                "hellenicshippingnews.com",# Hellenic Shipping News
                 "seatrade-maritime.com",   # Seatrade Maritime News
                 "kpler.com",               # Kpler: Commodities reports
                 "clarksons.com",           # Clarkson's
@@ -94,7 +93,7 @@ class PerplexitySearch:
                 "web_search_options": {"search_context_size": "high"},
                 "model": "sonar-deep-research",
                 "messages": messages,
-                "search_domain_filter": allowed_domains,
+                #"search_domain_filter": allowed_domains,
                 "search_recency_filter": "day"
             }
             headers = {
@@ -172,7 +171,6 @@ class PerplexitySearch:
             # If response_content is a string, you may need to parse JSON or adapt based on actual API output
             sources = []
             citations = response_json.get("citations", [])
-            log_info(citations)
             if citations:
                 for url in citations:
                     sources.append({

@@ -121,8 +121,6 @@ CONTEXT:
 - Only include information directly related to {cat_name}
 - Focus on 3-5 recent, impactful headlines with clear investment implications
 - If insufficient information is available, use the placeholder message
-- Where possible, provide a link to the sources used for the 50 word summary refer to the DATA section. Do not make an up. Ensure to use the full url. 
-    - Example: Use this https://www.bloomberg.com/news/articles/2025-05-12/la-fires-close-port-of-los-angeles and NOT https://www.bloomberg.com
 
 FORMAT EXAMPLE (for Shipping sector):
 
@@ -134,11 +132,7 @@ FORMAT EXAMPLE (for Shipping sector):
 ### LA fires close Port of Los Angeles
 - The temporary capacity reduction aligns with our counter-cyclical investment approach. Companies with diversified shipping routes and contingency plans should outperform peers, supporting our investment principle of prioritizing operational resilience during market disruptions.
 
-[Bloomberg - LA fires close Port of Los Angeles](https://www.bloomberg.com/news/articles/2025-05-12/la-fires-close-port-of-los-angeles)
-[Reuters - LA fires shuts down Port of Los Angeles](https://www.reuters.com/markets/la-fires-shuts-down-port-of-los-angeles-2025-05-12/)
-
-===============
-DATA SOURCE:
+DATA:
 {all_formatted_results}
 
 TASK REPEATED:
@@ -150,8 +144,6 @@ For each headline:
 1. Present it as a Markdown subheading (###)
 2. Follow with a ~50-word explanation of how it relates to our investment principles
 3. Focus on investment implications, opportunities, or risks
-4. Where possible, provide a link to the sources used for the 50 word summary refer to the DATA SOURCE section. Do not make an up.
-5. Use the full url for the link, not just the domain. (Example: https://www.bloomberg.com/news/articles/2025-05-12/la-fires-close-port-of-los-angeles and NOT https://www.bloomberg.com)
 
 ==========
 Repeat of Format Example: 
@@ -160,10 +152,6 @@ Repeat of Format Example:
 
 ### Shanghai ports close due to COVID
 - This supply chain disruption creates potential investment opportunities in logistics alternatives and companies with robust distribution networks. Our principle of seeking discounted assets in temporary distress applies here, as affected shipping companies may become undervalued.
-
-[Bloomberg - Shanghai ports close due to COVID](https://www.bloomberg.com/news/articles/2025-05-12/shanghai-ports-close-due-to-covid)
-[Reuters - Shanghai ports close due to COVID](https://www.reuters.com/markets/shanghai-ports-close-due-to-covid-2025-05-12/)
-
 ==========
 
 If you cannot find sufficient relevant information about '{cat_name}' in the data, respond with: 

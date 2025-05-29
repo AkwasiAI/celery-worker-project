@@ -2,14 +2,16 @@
 
 SHIPPING_INDUSTRY_PROMPT = '''Write a detailed analysis (aim for approximately {per_section_word_count} words) of the Shipping Industry as part of an investment portfolio report.
 Include:
-- Container shipping market dynamics with specific freight rates
-- Dry bulk shipping trends and key routes with rate data
-- Tanker market analysis and oil shipping routes
-- Major shipping companies performance and outlook with specific companies
-- Port congestion and logistics bottlenecks with wait time statistics
-- Fleet capacity and orderbook analysis with specific tonnage figures
-- Shipping regulation changes and environmental initiatives
-- Charter rate trends and forecasts with specific rate ranges
+- Container shipping market dynamics with specific freight rates (if available)
+- Dry bulk shipping trends and key routes with rate data (if available)
+- Tanker market analysis and oil shipping routes (if available)
+- Major shipping companies performance and outlook with specific companies (if available)
+- Port congestion and logistics bottlenecks with wait time statistics (if available)
+- Fleet capacity and orderbook analysis with specific tonnage figures (if available)
+- Shipping regulation changes and environmental initiatives (if available)
+- Charter rate trends and forecasts with specific rate ranges (if available)
+
+If specific data is not available in provided sources, state "Data not available" and provide general commentary based on available information.
 
 Format in markdown starting with:
 ## Shipping Industry
@@ -17,8 +19,8 @@ Format in markdown starting with:
 
 CONCLUSION_OUTLOOK_PROMPT = '''Write a concise conclusion and outlook (aim for approximately {per_section_word_count} words) for an investment portfolio report.
 Include:
-- Summary of key portfolio positioning and investment thesis
-- Forward-looking market expectations with timeframes
+- Summarize portfolio positioning and the investment thesis, supporting your points with evidence from previous sections.
+- Provide forward-looking market expectations, clearly distinguishing between data-backed projections and potential scenarios.  Indicate the level of uncertainty associated with each projection.
 - Upcoming catalysts to monitor with specific dates where possible
 - Potential portfolio adjustments to consider
 - Long-term strategic themes guiding investment decisions
@@ -26,16 +28,22 @@ Include:
 - Key risks to the investment outlook
 - Final investment recommendations and action items
 
+If specific dates or figures are not available for upcoming catalysts or potential adjustments, focus on qualitative analysis and general trends.
+
 Format in markdown starting with:
 ## Conclusion & Outlook
 '''
 
-REFERENCES_SOURCES_PROMPT = '''Create a properly formatted references and sources section for the investment portfolio report. 
+REFERENCES_SOURCES_PROMPT = '''Create a properly formatted references and sources section for the investment portfolio report. This section should list all sources that were cited inline throughout the report, based on the "Data Integrity & Factual Grounding" principles from the System Prompt. The report is current as of {current_date}.
 
-Only use the web searches provided to generate the references and sources section.
+Ensure all sources cited in the report body (using the format [Source: Name of Source, Date]) are listed here.
+Please write out the full URL (if applicable) and name of the Webpage/Source.
+Indicate the date accessed ({current_date}) or the date of the information from the source if it was specified in the inline citation.
 
 Format in markdown starting with:
 ## References & Sources
+
+
 '''
 
 RISK_ASSESSMENT_PROMPT = '''Write a detailed analysis (aim for approximately {per_section_word_count} words for the whole section) of Risk Assessment as part of an investment portfolio report. 
@@ -138,8 +146,8 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
 **Core Instructions:**
 
 1.  **Date and Title:**
-    *   Start with the title: `Investment Portfolio Executive Summary`
-    *   Immediately below the title, include the current date: `{current_date}`
+    *   Start with the title: `Executive summary - Comprehensive Portfolio`
+    *   Today's date is : {current_date}
 
 2.  **Content Sections:** Include the following sections, keeping the language clear, professional, and **forward-looking**:
     *   **Portfolio Positioning & Expected Drivers:** Briefly state the portfolio's primary objective based on its current structure (e.g., 'positioned for resilience', 'targeting growth from energy and tankers', 'balanced for anticipated volatility') and highlight the key factors or sectors expected to drive future performance. *Generate a plausible forward-looking statement based on the anticipated market outlook and portfolio construction.*
@@ -156,79 +164,112 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         *   `Allocation %`: Assign *plausible* percentage allocations. **These MUST sum exactly to 100.0%.** Use one decimal place.
         *   `Time Horizon`: Assign realistic, forward-looking horizons (e.g., `"1-3 months"`, `"3-6 months"`, `"6-12 months"`, `"1-2 years"`, `"2-3 years"`).
         *   `Confidence Level`: Assign a confidence level (e.g., `Medium`, `High`, `Very High`).
+   
+        
     *   **Ticker Source List (PREFERRED_TICKERS):**
         ```csv
         Category,Ticker,Name
-        US-Listed Commodity Companies,RIO,Rio Tinto PLC (ADR)
-        # ... (rest of the ticker list remains the same as in the previous prompt) ...
-        US-Listed Commodity Companies,BHP,BHP Group Ltd (ADR)
-        US-Listed Commodity Companies,VALE,Vale SA (ADR)
-        US-Listed Commodity Companies,GLNCY,Glencore PLC (ADR)
-        US-Listed Commodity Companies,ADM,Archer-Daniels-Midland Co
-        US-Listed Commodity Companies,BG,Bunge Global SA
-        US-Listed Commodity Companies,SHEL,Shell PLC (ADR)
-        US-Listed Commodity Companies,XOM,Exxon Mobil Corp
-        US-Listed Commodity Companies,CVX,Chevron Corp
-        US-Listed Commodity Companies,TTE,TotalEnergies SE (ADR)
-        US-Listed Commodity Companies,WPM,Wheaton Precious Metals Corp
-        US-Listed Commodity Companies,GOLD,Barrick Gold Corp
-        US-Listed Commodity Companies,CLF,Cleveland-Cliffs Inc
-        US-Listed Commodity Companies,ALB,Albemarle Corp
-        US-Listed Commodity Companies,MOS,Mosaic Co/The
-        Non-US-Listed Commodity Companies,WIL.SI,Wilmar International Ltd (Singapore Exchange)
-        US-Listed Shipping Companies,HAFNIA,Hafnia Ltd
-        US-Listed Shipping Companies,STNG,Scorpio Tankers Inc
-        US-Listed Shipping Companies,TRMD,TORM PLC (ADR)
-        US-Listed Shipping Companies,FRO,Frontline PLC
-        US-Listed Shipping Companies,OET,Okeanis Eco Tankers Corp
-        US-Listed Shipping Companies,DHT,DHT Holdings Inc
-        US-Listed Shipping Companies,INSW,International Seaways Inc
-        US-Listed Shipping Companies,NAT,Nordic American Tankers Ltd
-        US-Listed Shipping Companies,TNP,Tsakos Energy Navigation Ltd
-        US-Listed Shipping Companies,IMPP,Imperial Petroleum Inc
-        US-Listed Shipping Companies,PSHG,Performance Shipping Inc
-        US-Listed Shipping Companies,TORO,Toro Corp
-        US-Listed Shipping Companies,TK,Teekay Tankers Ltd
-        US-Listed Shipping Companies,PXS,Pyxis Tankers Inc
-        US-Listed Shipping Companies,TOPS,TOP Ships Inc
-        US-Listed Shipping Companies,DSX,Diana Shipping Inc
-        US-Listed Shipping Companies,GNK,Genco Shipping & Trading Ltd
-        US-Listed Shipping Companies,GOGL,Golden Ocean Group Ltd
-        US-Listed Shipping Companies,NMM,Navios Maritime Partners LP
-        US-Listed Shipping Companies,SB,Safe Bulkers Inc
-        US-Listed Shipping Companies,SBLK,Star Bulk Carriers Corp
-        US-Listed Shipping Companies,SHIP,Seanergy Maritime Holdings Corp
-        US-Listed Shipping Companies,CTRM,Castor Maritime Inc
-        US-Listed Shipping Companies,GLBS,Globus Maritime Ltd
-        US-Listed Shipping Companies,CMRE,Costamare Inc
-        US-Listed Shipping Companies,DAC,Danaos Corp
-        US-Listed Shipping Companies,GSL,Global Ship Lease Inc
-        US-Listed Shipping Companies,ESEA,Euroseas Ltd
-        US-Listed Shipping Companies,ZIM,ZIM Integrated Shipping Services
-        US-Listed Shipping Companies,SFL,SFL Corp Ltd
-        US-Listed Shipping Companies,GASS,StealthGas Inc
+        US-Listed Shipping Companies,HAFNI.OL,"Hafnia Limited (Oslo Listing, Note: Category US-Listed is a mismatch. US OTC is HAFNF.)"
+        US-Listed Shipping Companies,STNG,Scorpio Tankers Inc.
+        US-Listed Shipping Companies,TRMD,TORM plc (ADR)
+        US-Listed Shipping Companies,FRO,Frontline plc
+        US-Listed Commodity Companies,ECO,"Ecolab Inc. (If Ecopetrol EC was intended, this needs changing)"
+        US-Listed Shipping Companies,DHT,DHT Holdings, Inc.
+        Non-US-Listed Shipping Companies,EURN.BR,Euronav NV
+        US-Listed Shipping Companies,INSW,International Seaways, Inc.
+        US-Listed Shipping Companies,NAT,Nordic American Tankers Limited
+        US-Listed Shipping Companies,TEN,Tsakos Energy Navigation Limited
+        US-Listed Shipping Companies,IMPP,Imperial Petroleum Inc.
+        US-Listed Shipping Companies,PSHG,Performance Shipping Inc.
+        US-Listed Shipping Companies,TORO,Toro Corp.
+        US-Listed Shipping Companies,TNK,Teekay Tankers Ltd.
+        US-Listed Shipping Companies,PXS,"Pyxis Tankers Inc. (Note: Became Toro Corp., likely delisted)"
+        US-Listed Shipping Companies,TOPS,TOP Ships Inc.
+        US-Listed Shipping Companies,DSX,Diana Shipping Inc.
+        US-Listed Shipping Companies,GNK,Genco Shipping & Trading Limited
+        US-Listed Shipping Companies,GOGL,Golden Ocean Group Limited
+        US-Listed Shipping Companies,NMM,Navios Maritime Partners L.P.
+        US-Listed Shipping Companies,SB,Safe Bulkers, Inc.
+        US-Listed Shipping Companies,SBLK,Star Bulk Carriers Corp.
+        US-Listed Shipping Companies,SHIP,Seanergy Maritime Holdings Corp.
+        Non-US-Listed Shipping Companies,HSHP.OL,Himalaya Shipping Ltd.
+        US-Listed Shipping Companies,EDRY,EuroDry Ltd.
+        US-Listed Shipping Companies,CTRM,Castor Maritime Inc.
+        US-Listed Shipping Companies,ICON,"Iconix Brand Group, Inc. (Note: If different ""ICON"" was intended, clarify)"
+        US-Listed Shipping Companies,GLBS,Globus Maritime Limited
+        US-Listed Shipping Companies,CMRE,Costamare Inc.
+        US-Listed Shipping Companies,DAC,Danaos Corporation
+        US-Listed Shipping Companies,GSL,Global Ship Lease, Inc.
+        US-Listed Shipping Companies,ESEA,Euroseas Ltd.
+        Non-US-Listed Shipping Companies,MPCC.OL,MPC Container Ships ASA
+        US-Listed Shipping Companies,ZIM,ZIM Integrated Shipping Services Ltd.
+        US-Listed Shipping Companies,SFL,SFL Corporation Ltd.
+        Non-US-Listed Shipping Companies,MAERSK-B.CO,A.P. Møller - Mærsk A/S B
+        Non-US-Listed Shipping Companies,BWLPG.OL,BW LPG Limited
+        US-Listed Shipping Companies,LPG,Dorian LPG Ltd.
+        US-Listed Commodity Companies,CCEC,"China Communications Construction Co. Ltd. (ADR is CCECF, HK is 1800.HK - Clarify if different CCEC was meant)"
+        US-Listed Shipping Companies,GASS,StealthGas Inc.
         US-Listed Shipping Companies,DLNG,Dynagas LNG Partners LP
-        US-Listed Shipping Companies,FLNG,FLEX LNG Ltd
-        Non-US-Listed Shipping Companies,CMB.BR,CMB Tech NV
-        Non-US-Listed Shipping Companies,2020.OL,2020 Bulkers Ltd
-        Non-US-Listed Shipping Companies,HSHIP.OL,Himalaya Shipping Ltd
-        Non-US-Listed Shipping Companies,JIN.OL,Jinhui Shipping & Transportation
-        Non-US-Listed Shipping Companies,BELCO.OL,Belships ASA
-        Non-US-Listed Shipping Companies,ICON,Icon Energy Corp
-        Non-US-Listed Shipping Companies,MAERSK-B.CO,AP Moller - Maersk A/S
-        Non-US-Listed Shipping Companies,BW LPG.OL,BW LPG Ltd
-        Non-US-Listed Shipping Companies,AVANCE.OL,Avance Gas Holding Ltd
-        Non-US-Listed Shipping Companies,ALNG.OL,Awilco LNG AS
-        Non-US-Listed Shipping Companies,COOL.OL,Cool Co Ltd
-        US-Listed Offshore Energy Companies,RIG,Transocean Ltd
-        US-Listed Offshore Energy Companies,HLX,Helix Energy Solutions Group Inc
-        US-Listed Offshore Energy Companies,TDW,Tidewater Inc
-        Non-US-Listed Offshore Energy Companies,PROSE.OL,Prosafe SE
-        Non-US-Listed Offshore Energy Companies,SPM.MI,Saipem SpA
-        Non-US-Listed Offshore Energy Companies,SBMO.AS,SBM Offshore NV
+        Non-US-Listed Shipping Companies,AGAS.OL,Avance Gas Holding Ltd.
+        Non-US-Listed Shipping Companies,ALNG.OL,Awilco LNG ASA
+        US-Listed Shipping Companies,FLNG,FLEX LNG Ltd.
+        US-Listed Offshore Energy Companies,RIG,Transocean Ltd.
+        US-Listed Offshore Energy Companies,HLX,Helix Energy Solutions Group, Inc.
+        US-Listed Shipping Companies,PRS,"ProSight Global, Inc. (Acquired/Delisted - Note: If different PRS was intended, clarify)"
+        Non-US-Listed Offshore Energy Companies,SBMO.AS,SBM Offshore N.V.
+        US-Listed Offshore Energy Companies,TDW,Tidewater Inc.
+        US-Listed Commodity Companies,RIO,Rio Tinto Group plc (ADR)
+        US-Listed Commodity Companies,BHP,BHP Group Limited (ADR)
+        US-Listed Commodity Companies,VALE,Vale S.A. (ADR)
+        US-Listed Commodity Companies,GLNCY,Glencore plc (ADR)
+        US-Listed Commodity Companies,ADM,Archer-Daniels-Midland Company
+        US-Listed Commodity Companies,WLMIY,"Wilh. Wilhelmsen Holding ASA (ADR)"
+        US-Listed Commodity Companies,BG,Bunge Global SA
+        US-Listed Commodity Companies,SHEL,Shell plc (ADR)
+        US-Listed Commodity Companies,XOM,Exxon Mobil Corporation
+        US-Listed Commodity Companies,CVX,Chevron Corporation
+        US-Listed Commodity Companies,TTE,TotalEnergies SE (ADR)
+        US-Listed Commodity Companies,WPM,Wheaton Precious Metals Corp.
+        US-Listed Commodity Companies,GOLD,Barrick Gold Corporation
+        US-Listed Commodity Companies,CLF,Cleveland-Cliffs Inc.
+        US-Listed Commodity Companies,ALB,Albemarle Corporation
+        US-Listed Commodity Companies,MOS,The Mosaic Company
         Shipping & Tanker ETFs,BDRY,Breakwave Dry Bulk Shipping ETF
         Shipping & Tanker ETFs,BWET,Breakwave Tanker Shipping ETF
-        Popular ETFs,SPY,SPDR S&P 500 ETF
+        Indices,CCMP,NASDAQ Composite Index (FMP Standard: ^IXIC)
+        Indices,CAC,CAC 40 Index (FMP Standard: ^FCHI)
+        Indices,DAX,DAX Index (FMP Standard: ^GDAXI)
+        Indices,IBEX,IBEX 35 Index (FMP Standard: ^IBEX)
+        Indices,SMI,Swiss Market Index (FMP Standard: ^SSMI)
+        Non-US-Listed Shipping Companies,2020.OL,2020 Bulkers Ltd.
+        Non-US-Listed Shipping Companies,JIN.OL,Jinhui Shipping and Transportation Limited
+        Non-US-Listed Shipping Companies,BELCO.OL,Belships ASA
+        Non-US-Listed Shipping Companies,COOL.OL,Cool Company Ltd.
+        Non-US-Listed Offshore Energy Companies,SPM.MI,Saipem S.p.A.
+        Indices,^DJI,Dow Jones Industrial Average
+        Indices,^GSPC,S&P 500 Index
+        Indices,^GSPTSE,S&P/TSX Composite Index
+        Indices,^MXX,IPC Mexico Index
+        Indices,^BVSP,Bovespa Index (Brazil)
+        Indices,^STOXX50E,EURO STOXX 50 Index
+        Indices,^FTSE,FTSE 100 Index
+        Indices,^N225,Nikkei 225 Index
+        Indices,^HSI,Hang Seng Index
+        Indices,^AXJO,S&P/ASX 200 Index
+        Indices,^FTMIB,FTSE MIB Index (Italy)
+        Indices,000300.SS,CSI 300 Index (Shanghai)
+        Commodities,RBTA,Rotterdam Coal Futures (Generic Code)
+        Commodities,CLA,Coal API 2 CIF ARA (Generic Code)
+        Commodities,COA,Coal API 4 FOB Richards Bay (Generic Code)
+        Commodities,QSA,Iron Ore Fe 62% CFR China (Generic Code)
+        Commodities,XBA,Alumina FOB Australia (Generic Code)
+        Commodities,HOA,Heating Oil Futures (Generic Code)
+        Commodities,NGA,Natural Gas Futures (Generic Code)
+        Commodities,TZTA,Carbon Emissions Allowances (Generic Code)
+        Commodities,LMAHDS03,LME Aluminium High Grade Cash (Generic Code)
+        Commodities,LMCADS03,LME Copper Grade A Cash (Generic Code)
+        Commodities,LMNIDS03,LME Nickel Primary Cash (Generic Code)
+        Commodities,IOEA,Iron Ore Fines 62% Fe, CFR China TSI (Generic Code)
         ```
 
 4.  **CRITICAL REQUIREMENT: Hidden JSON Output:**
@@ -249,11 +290,11 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
 
 **--- GOLD STANDARD EXAMPLE OUTPUT (Forward-Looking Adaptation) ---**
 
-**(Follow this structure, tone, and level of detail precisely)**
+**(Follow this structure, tone, and level of detail precisely, Note! Everything here are Placeholders)**
 
 ```markdown
-**Investment Portfolio Executive Summary**
-October 26, 2023
+**Executive summary - Comprehensive Portfolio**
+October 26, 2023 (please use Today's date, this is a placeholder)
 
 **Portfolio Positioning & Expected Drivers:**
 The portfolio is strategically positioned to capitalize on anticipated continued strength in the energy sector and favorable supply-demand dynamics in tanker shipping. Key performance drivers are expected to be energy equities benefiting from geopolitical premiums and disciplined capital return, alongside tanker operators poised to gain from sustained elevated charter rates. Diversification through select commodities and broad market exposure aims to mitigate potential volatility from shifting global growth expectations.
@@ -314,6 +355,13 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
 
 **Core Guiding Principles (Mandatory Adherence):**
 
+*   **Data Integrity & Factual Grounding (CRITICAL):**
+    *   **1. Prioritize Provided Data:** Your primary responsibility is to produce factually accurate and well-supported analysis. Base all statements, data, and claims *exclusively* on the information provided in the web search results and contextual information given in the user prompt for the current section.
+    *   **2. Cite Sources Inline:** For EVERY specific data point (e.g., percentages, values, dates), statistic, or significant claim, you MUST provide an inline citation. Use the format: `[Source: Name of Source, Date of data if available, otherwise "as of {current_date}"]`. If the source is a URL from the web search, include the main domain.
+    *   **3. Handle Missing Data Explicitly:** If specific data requested in the user prompt for the current section is NOT found in the provided web search results or context, you can use your search engine tool, else you MUST explicitly state: "Specific [type of data, e.g., 'Q1 container freight rates'] not found in provided sources for the period up to {current_date}." Then, and only then, you may provide a general analysis or commentary based on broader available information, clearly indicating that it is not based on specific recent data. **DO NOT INVENT OR FABRICATE DATA to fill gaps.**
+    *   **4. Verify and State Dates:** Pay extremely close attention to the dates of any information you use. Ensure all analysis clearly reflects the context of being "as of {current_date}". If you must use historical data from the provided sources, you MUST clearly label it as historical (e.g., "According to a [Source Name] report from [Date of Report], historical data showed..."). Do not present historical data as if it is current for {current_date} or as a future fact.
+    *   **5. Distinguish Facts from Projections/Opinions:** When discussing future outlooks, forecasts, or opinions (even from cited sources), clearly label them as such (e.g., "Projections from [Source] suggest...", "According to [Analyst/Source], potential scenarios include...", "The market sentiment appears to be..."). Do not state future possibilities, opinions, or speculative statements as if they are confirmed current facts for {current_date}.
+
 *   **Orasis Investment Thesis:**
     *   Capitalize on **global trade shifts and opportunities**.
     *   Focus on impacts of changing trade relationships/policies on countries/industries (esp. China, Asia, Middle East, Africa vs. US/Europe).
@@ -333,6 +381,7 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
         *   **Shipping:** Strong emphasis across all key segments (tanker, dry bulk, container, LNG, LPG, offshore) via equities, potentially bonds.
         *   **Credit:** Include G7 10-year government bonds (as benchmarks/hedges), high-yield shipping bonds, commodity company corporate bonds.
         *   **ETFs & Indices:** Include major global indices (US, Europe, Asia) and relevant sector/thematic ETFs.
+*   **Data Integrity:**  Prioritize using verifiable data from reliable sources. If specific data is not available, explicitly state "Data not available" instead of making assumptions or fabricating information. ALWAYS provide reference sources for all data points and factual claims.
 
 **Required Report Structure & Content:**
 
@@ -344,6 +393,7 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
     *   Specific outlook for relevant commodity markets (energy, metals, agriculture).
     *   Detailed outlook for key shipping segments (tanker, dry bulk, container, LNG, LPG, offshore), citing relevant rate trends, supply/demand factors.
     *   Cite specific data/sources (e.g., "Source: Clarksons Research, Q{{X}} {current_year}", "Source: EIA {priority_period} Report", "Source: Reuters, YYYY-MM-DD").
+    *   If specific data is not readily available, acknowledge the lack of precise information and provide qualitative insights based on broader trends.
 3.  **Portfolio Strategy & Construction Rationale:**
     *   Explain *how* the constructed portfolio implements the Orasis thesis and meets George's criteria.
     *   Detail the approach to leverage and hedging within the portfolio.
@@ -356,6 +406,7 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
         *   Key data point(s) supporting the position (e.g., valuation metric, rate trend, policy change).
         *   Relevant time horizon and confidence level.
         *   Explicitly justify the **SHORT** positions based on fundamental analysis.
+        *   If a specific data point supporting a position is not available, focus on the qualitative rationale and general market outlook.
 5.  **Risk Assessment:**
     *   Outline the main risks associated with the portfolio strategy and key positions (e.g., geopolitical escalation, demand shock, interest rate risk).
     *   Describe planned risk mitigation strategies (hedges, diversification, position sizing).

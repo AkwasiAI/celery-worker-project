@@ -51,7 +51,6 @@ async def calculate_benchmark_metrics_with_llm(client, portfolio_json, current_d
     except Exception as e:
         print(f"ERROR: calculate_benchmark_metrics failed: {e}")
         return json.dumps({})
-    
 
 async def calculate_benchmark_metrics(noclient, portfolio_json, current_date):
     try:

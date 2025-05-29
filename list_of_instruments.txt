@@ -1,0 +1,603 @@
+HAFNI NO	Hafnia Ltd
+STNG US	Scorpio Tankers Inc
+TRMD US	TORM PLC
+FRO US	Frontline PLC
+ECO US	Okeanis Eco Tankers Corp
+DHT US	DHT Holdings Inc
+EURN EU	CMB Tech NV
+INSW US	International Seaways Inc
+NAT US	Nordic American Tankers Ltd
+TEN US	Tsakos Energy Navigation Ltd
+IMPP US	Imperial Petroleum Inc
+PSHG US	Performance Shipping Inc
+TORO US	Toro Corp
+TNK US	Teekay Tankers Ltd
+PXS US	Pyxis Tankers Inc
+FRO US	Frontline PLC
+TOPS US	TOP Ships Inc
+DSX US	Diana Shipping Inc
+GNK US	Genco Shipping & Trading Ltd
+GOGL US	Golden Ocean Group Ltd
+NMM US	Navios Maritime Partners LP
+SB US	Safe Bulkers Inc
+SBLK US	Star Bulk Carriers Corp
+SHIP US	Seanergy Maritime Holdings Cor
+2020 NO	2020 Bulkers Ltd
+HSHP NO	Himalaya Shipping Ltd
+EDRY US	EuroDry Ltd
+JIN NO	Jinhui Shipping & Transportati
+BELCO NO	Belships ASA
+CTRM US	Castor Maritime Inc
+ICON US	Icon Energy Corp
+GLBS US	Globus Maritime Ltd
+CMRE US	Costamare Inc
+DAC US	Danaos Corp
+GSL US	Global Ship Lease Inc
+ESEA US	Euroseas Ltd
+MPCC NO	MPC Container Ships ASA
+ZIM US	ZIM Integrated Shipping Servic
+SFL US	SFL Corp Ltd
+MAERSKB DC	AP Moller - Maersk A/S
+BWLPG NO	BW LPG Ltd
+LPG US	Dorian LPG Ltd
+CCEC US	Capital Clean Energy Carriers
+GASS US	StealthGas Inc
+DLNG US	Dynagas LNG Partners LP
+AGAS NO	Avance Gas Holding Ltd
+ALNG NO	Awilco LNG AS
+CLCO NO	Cool Co Ltd
+FLNG US	FLEX LNG Ltd
+RIG US	Transocean Ltd
+HLX US	Helix Energy Solutions Group I
+PRS NO	Prosafe SE
+SPM IM	Saipem SpA
+SBMO NA	SBM Offshore NV
+TDW US	Tidewater Inc
+RIO US	Rio Tinto PLC
+BHP US	BHP Group Ltd
+VALE US	Vale SA
+GLNCY US	Glencore PLC
+ADM US	Archer-Daniels-Midland Co
+WLMIY US	Wilmar International Ltd
+BG US	Bunge Global SA
+SHEL US	Shell PLC
+XOM US	Exxon Mobil Corp
+CVX US	Chevron Corp
+TTE US	TotalEnergies SE
+WPM US	Wheaton Precious Metals Corp
+GOLD US	Barrick Gold Corp
+CLF US	Cleveland-Cliffs Inc
+ALB US	Albemarle Corp
+MOS US	Mosaic Co/The
+BDRY US	Breakwave Dry Bulk Shipping ET
+BWET US	Breakwave Tanker Shipping ETF
+INDU Index	Dow Jones Industrial Average
+SPX Index	S&P 500 INDEX
+CCMP Index	NASDAQ Composite Index
+SPTSX Index	S&P/TSX Composite Index
+MEXBOL Index	S&P/BMV IPC
+IBOV Index	Ibovespa Brasil Sao Paulo Stoc
+SX5E Index	EURO STOXX 50 Price EUR
+UKX Index	FTSE 100 Index
+CAC Index	CAC 40
+DAX Index	Deutsche Boerse AG German Stoc
+IBEX Index	IBEX 35 Index
+FTSEMIB Index	FTSE MIB Index
+OMX Index	OMX Stockholm 30 Index
+SMI Index	Swiss Market Index
+NKY Index	Nikkei 225
+HSI Index	Hang Seng Index
+SHSZ300 Index	Shanghai Shenzhen CSI 300 Inde
+AS51 Index	S&P/ASX 200
+WORLD Index	Bloomberg World Large & Mid Ca
+CLA Comdty	WTI CRUDE FUTURE  Apr25
+COA Comdty	BRENT CRUDE FUTR  May25
+QSA Comdty	Low Su Gasoil G   Mar25
+XBA Comdty	GASOLINE RBOB FUT Apr25
+HOA Comdty	NY Harb ULSD Fut  Apr25
+NGA Comdty	NATURAL GAS FUTR  Apr25
+TZTA Comdty	TTF NAT GAS F     Apr25
+LMAHDS03 Comdty	LME ALUMINUM  3MO ($)
+LMCADS03 Comdty	LME COPPER    3MO ($)
+LMNIDS03 Comdty	LME NICKEL    3MO ($)
+IOEA Comdty	DCE Iron Ore Fut  May25
+RBTA Comdty	Deformed Bar Fut  May25
+XAU Curncy	Gold
+XAG Curncy	Silver
+LCA Comdty	LIVE CATTLE FUTR  Apr25
+KCA Comdty	COFFEE 'C' FUTURE May25
+C A Comdty	CORN FUTURE       May25
+CTA Comdty	COTTON NO.2 FUTR  May25
+S A Comdty	SOYBEAN FUTURE    May25
+SBA Comdty	SUGAR #11 (WORLD) May25
+W A Comdty	WHEAT FUTURE(CBT) May25
+91282CMM Govt	T 4 5/8 02/15/35
+YW370853 Corp	CAN 3 1/4 12/01/34
+ZF497784 Corp	BRAZIL 6 1/8 03/15/34
+ZO305198 Corp	ARGENT 4 1/8 07/09/35
+ZM215990 Corp	MEX 6.35 02/09/35
+YR075593 Corp	UKT 4 1/2 03/07/35
+YR156127 Corp	FRTR 3.2 05/25/35
+YS326771 Corp	DBR 2 1/2 02/15/35
+YS466858 Corp	BTPS 3.65 08/01/35
+YX393934 Corp	SPGB 3.45 10/31/34
+YS492770 Corp	PGB 3 06/15/35
+ZF411707 Corp	SGB 2 1/4 05/11/35
+ZF793713 Corp	NETHER 2 1/2 07/15/34
+BP977825 Corp	SWISS 0 1/4 06/23/35
+YS603944 Corp	GGB 3 5/8 06/15/35
+YS443328 Corp	JGB 1.2 12/20/34
+ZK214470 Corp	ACGB 3 1/2 12/21/34
+ZN271569 Corp	NZGB 4 1/4 05/15/34
+YU337204 Corp	KTB 3 12/10/34
+YT304720 Corp	CGB 2.04 11/25/34
+USDTWD BGN Curncy	US DOLLAR/TAIWAN DOLLAR
+USDMYR BGN Curncy	US DOLLAR/MALAYSIAN RINGGIT
+USDHKD BGN Curncy	US DOLLAR/HONG KONG DOLLAR
+USDINR BGN Curncy	US DOLLAR/INDIAN RUPEE
+USDKRW BGN Curncy	US DOLLAR/SOUTH KOREAN WON
+USDIDR BGN Curncy	US DOLLAR/INDONESIAN RUPIAH
+USDPHP BGN Curncy	US DOLLAR/PHILIPPINES PESO
+USDCNY BGN Curncy	US DOLLAR/CHINA RENMINBI
+USDSGD BGN Curncy	US DOLLAR/SINGAPORE DOLLAR
+USDCNH BGN Curncy	US DOLLAR/China Offshore Spot
+USDJPY BGN Curncy	US DOLLAR/JAPANESE YEN
+USDTHB BGN Curncy	US DOLLAR/THAI BAHT
+BEU50P Index	Bloomberg Eurozone 50 Price Re
+SX5E Index	EURO STOXX 50 Price EUR
+SX5P Index	STOXX Europe 50 Price EUR
+SXXE Index	EURO STOXX Index
+SXXP Index	STOXX Europe 600 Price Index E
+EUE15P Index	STOXX EU Enlarged 15 Price EUR
+EUETMP Index	STOXX EU Enlarged TMI (Price)
+E100 Index	FTSE Eurotop 100 Index
+E300 Index	FTSEurofirst 300 Index
+MSER Index	MSCI Euro Index
+MSPE Index	MSCI Pan Euro Index
+SPEURO Index	S&P Europe 350 GICS Level Sect
+SPEU Index	S&P Europe Economic Sectors GI
+N100 Index	Euronext 100 Index
+N150 Index	Euronext 150 Index
+FTEF80 Index	FTSE Eurofirst 80 Index
+FTEFC1 Index	FTSE Eurofirst 100 Index
+NTX Index	Wiener Boerse New Europe Blue
+BGB100 Index	Bloomberg United Kingdom 100 P
+UKX Index	FTSE 100 Index
+MCX Index	FTSE 250 Index
+NMX Index	FTSE 350 Index
+SMX Index	FTSE Small Capitalisation Inde
+ASX Index	FTSE All-Share Index
+T1X Index	FTSE techMARK Focus Index
+AXX Index	FTSE AIM All Share Index
+BDE40PR Index	Bloomberg Germany 40 Price Ret
+DAX Index	Deutsche Boerse AG German Stoc
+CDAX Index	Deutsche Borse AG Composite DA
+HDAX Index	Deutsche Borse AG HDAX Index
+MDAX Index	Deutsche Borse AG DAX Mid-Cap
+TDXP Index	Deutsche Borse TecDAX Total Re
+PXAP Index	Deutsche Borse Prime All Share
+NMDP Index	Deutsche Borse Technology All
+CLXP Index	Deutsche Borse Classic All Sha
+BFR40PR Index	Bloomberg France 40 Price Retu
+CAC Index	CAC 40
+SBF250 Index	CAC All-Tradable
+CN20 Index	CAC Next 20
+CM100 Index	CAC Mid 60
+MS190 Index	CAC Mid & Small
+CS90 Index	CAC Small
+PAX Index	CAC AllShares Index
+SBF120 Index	SBF 120
+BES35PR Index	Bloomberg Spain 35 Price Retur
+IBEX Index	IBEX 35 Index
+MADX Index	Madrid Stock Exchange General
+ES30 Index	Dow Jones Spain Titans 30 Inde
+CHL Index	Bloomberg Switzerland Large &
+SMI Index	Swiss Market Index
+SPI Index	Swiss Exchange Swiss Performan
+CH30 Index	Dow Jones Switzerland Titans 3
+SPIEXX Index	SPI EXTRA Price Return
+SMIM Index	SMIM Price Index
+SLI Index	SLI SWISS LEADER INDEX
+DIT40P Index	Bloomberg Italia 40 Price Retu
+FTSEMIB Index	FTSE MIB Index
+ITLMS Index	FTSE Italia All-Share Index
+ITMC Index	FTSE Italia Mid Cap Index
+ITSTAR Index	FTSE Italia STAR Index
+IT30 Index	Dow Jones Italy Titans 30 Inde
+PTL Index	Bloomberg Portugal Large & Mid
+BVLX Index	PSI All-Share Index Gross Retu
+PSI20 Index	PSI
+IEL Index	Bloomberg Ireland Large & Mid
+ISEQ Index	ISEQ All-Share Index
+ICEXI Index	OMX Iceland All-Share PI
+NLL Index	Bloomberg Netherlands Large &
+AEX Index	AEX-Index
+AMX Index	AMX-Index
+BEL Index	Bloomberg Belgium Large & Mid
+BEL20 Index	BEL 20
+BELSTK Index	Brussels Stock Exchange Belgia
+LUXXX Index	Luxembourg Stock Exchange LuxX
+LUXXR Index	Luxembourg Stock Exchange LuxX
+DKL Index	Bloomberg Denmark Large & Mid
+KFX Index	OMX Copenhagen 20
+KAX Index	OMX Copenhagen_PI
+OMXC25 Index	OMX Copenhagen 25 Index
+FIL Index	Bloomberg Finland Large & Mid
+HEX Index	OMX Helsinki_PI
+HEX25 Index	OMX Helsinki 25 Index
+HEXP Index	OMX Helsinki Cap Index
+NOL Index	Bloomberg Norway Large & Mid C
+OBX Index	OBX Total Return Index
+OBXP Index	Oslo Stock Exchange OBX Price
+OSEAX Index	Oslo Stock Exchange All Share
+OSEBX Index	Oslo Boers Benchmark Index GR
+OSEFX Index	Oslo Boers Mutual Fund Index G
+OSESX Index	Oslo Boers Small Cap Index_GI
+OMXO20GI Index	OMX Oslo 20 GI Index
+OMXO20 Index	OMX Oslo 20 Index
+SEL Index	Bloomberg Sweden Large & Mid C
+OMX Index	OMX Stockholm 30 Index
+SBX Index	OMX Stockholm Benchmark_GI
+SAX Index	OMX Stockholm Index
+SE30 Index	Dow Jones Sweden Titans 30 Ind
+ATL Index	Bloomberg Austria Large & Mid
+ATX Index	Vienna Stock Exchange Austrian
+WBI Index	Vienna Stock Exchange Share In
+ATXPRIME Index	Austrian ATX Prime Index
+GRL Index	Bloomberg Greece Large & Mid C
+ASE Index	Athens Stock Exchange General
+FTASE Index	FTSE/Athens Stock Exchange Lar
+FTSEM Index	FTSE/Athens Stock Exchange Mid
+PLL Index	Bloomberg Poland Large & Mid C
+WIG Index	Warsaw Stock Exchange WIG Tota
+WIG20 Index	WIG20
+SWIG80 Index	Warsaw Stock Exchange sWIG80 I
+MIDWIG Index	Warsaw Stock Exchange mWIG40 I
+CZL Index	Bloomberg Czech Republic Large
+PX Index	Prague Stock Exchange Index
+HULSP Index	Bloomberg Hungary Large, Mid &
+BUX Index	Budapest Stock Exchange Budape
+CHTX Index	OTOB Hungarian Traded Index CH
+BET Index	Bucharest Stock Exchange Tradi
+PFTS Index	Ukraine PFTS Index
+KZKAK Index	Kazakhstan Stock Exchange Inde
+SKSM Index	Slovak Share Index
+CRO Index	Croatia Zagreb Stock Exchange
+SBITOP Index	Ljubljana Stock Exchange Slove
+BIRS Index	Stock Exchange Index of Republ
+SASX10 Index	SASE Free Market 10 Index
+BELEXLIN Index	Belgrade Stock Exchange BELEXl
+BELEX15 Index	Belgrade Stock Exchange BELEX1
+TALSE Index	OMX Tallinn TR Index
+MBI Index	MBI 10 INDEX
+RIGSE Index	OMX Riga Index
+VILSE Index	OMX Vilnius Index
+SOFIX Index	SOFIX Index
+TRL Index	Bloomberg Turkey Large & Mid C
+XU100 Index	Borsa Istanbul 100 Index
+XU030 Index	BIST 30 Index
+TR20I Index	Dow Jones Turkey Titans 20 Ind
+CYSMMAPA Index	Cyprus Stock Exchange General
+MALTEX Index	Malta Stock Exchange
+ZAL Index	Bloomberg South Africa Large &
+TOP40 Index	FTSE/JSE Africa Top40 Tradeabl
+JALSH Index	FTSE/JSE Africa All Share Inde
+INDI25 Index	FTSE/JSE Africa Industrial 25
+EGLSP Index	Bloomberg Egypt Large, Mid & S
+HERMES Index	Egyptian Financial Group Herme
+EGX30 Index	Egyptian Exchange EGX 30 Price
+MOSENEW Index	MASI Free Float All Shares Ind
+TUSISE Index	Tunisia Stock Exchange TUNINDE
+FTN098 Index	FTSE NSX Overall Index
+BGSMDC Index	Botswana Gaborone Index
+NGSEINDX Index	NGX All Share Index
+DARSDSEI Index	Tanzania All Share Index Real
+KNSMIDX Index	Nairobi Securities Exchange Lt
+NSEASI Index	Nairobi Securities Exchange Lt
+GGSECI Index	Ghana Stock Exchange Composite
+KWL Index	Bloomberg Kuwait Large & Mid C
+KWSEPM Index	Boursa Kuwait Premier Market P
+KWSEMM Index	Boursa Kuwait Main Market Pric
+ILL Index	Bloomberg Israel Large & Mid C
+TA-35 Index	Tel Aviv Stock Exchange 35 Ind
+TA-125 Index	Tel Aviv Stock Exchange 125 In
+PASISI Index	Palestine Stock Exchange Al Qu
+BLOM Index	Blom Stock Index Lebanon
+BHSEASI Index	Bahrain Bourse All Share Index
+SAL Index	Bloomberg Saudi Arabia Large &
+SASEIDX Index	Tadawul All Share Index
+JOSMGNFF Index	Amman Stock Exchange General I
+MSM30 Index	Muscat Stock Exchange MSX 30 I
+QAL Index	Bloomberg Qatar Large & Mid Ca
+DSM Index	Qatar Exchange Index
+QEAS Index	QE All Share Index
+QETR Index	QE Total Return Index
+AEL Index	Bloomberg United Arab Emirates
+DFMGI Index	Dubai Financial Market General
+FADSM15 Index	FTSE ADX 15 Index / FADX 15
+DUAE Index	FTSE NASDAQ Dubai UAE 20 Price
+SEMDEX Index	Mauritius Stock Exchange SEMDE
+APACD Index	Bloomberg APAC Developed Marke
+TPX Index	Tokyo Stock Exchange Tokyo Sto
+NKY Index	Nikkei 225
+JPNK400 Index	JPX Nikkei Index 400
+HSI Index	Hang Seng Index
+SHSZ300 Index	Shanghai Shenzhen CSI 300 Inde
+SHCOMP Index	Shanghai Stock Exchange Compos
+SZCOMP Index	Shenzhen Stock Exchange Compos
+HSCEI Index	Hang Seng China Enterprises In
+TWSE Index	Taiwan Stock Exchange Weighted
+KOSPI Index	Korea Stock Exchange KOSPI Ind
+KOSDAQ Index	Korea Securities Dealers Assoc
+AS51 Index	S&P/ASX 200
+NIFTY Index	NSE Nifty 50 Index
+SENSEX Index	BSE SENSEX
+STI Index	Straits Times Index STI
+FBMKLCI Index	FTSE Bursa Malaysia KLCI Index
+SET Index	Stock Exchange of Thailand SET
+JCI Index	Jakarta Stock Exchange Composi
+NZSE50FG Index	S&P/NZX 50 Total Return Index
+PCOMP Index	Philippines Stock Exchange PSE
+KSE100 Index	Karachi Stock Exchange KSE-100
+VNINDEX Index	Vietnam Ho Chi Minh Stock Inde
+CSEALL Index	Sri Lanka Colombo Stock Exchan
+LSXC Index	Laos Securities Exchange Compo
+MSETOP Index	Mongolia Stock Exchange Top 20
+ASIAD Index	Bloomberg Asia Developed Marke
+SAXCME Index	S&P Asia 50 CME Index
+MXAPEXA Index	MSCI asia apex 50
+BJP500P Index	Bloomberg Japan 500 Price Retu
+TPX Index	Tokyo Stock Exchange Tokyo Sto
+TPXC30 Index	TOPIX Core 30 Index
+TPXL70 Index	TOPIX Large 70 Index
+TPX500 Index	TOPIX 500 Index
+TPXSM Index	TOPIX Small Index
+TPXM400 Index	TOPIX Mid 400 Index
+TPX100 Index	TOPIX 100 Index
+TSES Index	Tokyo Stock Exchange Standard
+TSEG Index	Tokyo Stock Exchange Growth Ma
+TSEP Index	Tokyo Stock Exchange Prime Mar
+NKY Index	Nikkei 225
+NEY Index	Nikkei 300 Index
+NKY500 Index	Nikkei 500
+TSEREIT Index	Tokyo Stock Exchange REIT Inde
+TSEMOTHR Index	TSE Growth Market 250 Index
+JPNK400 Index	JPX Nikkei Index 400
+JPXP150 Index	JPX Prime 150 Index
+HKPL Index	Bloomberg Hong Kong Large & Mi
+HSI Index	Hang Seng Index
+HSCI Index	Hang Seng Composite Index
+HKSPLC25 Index	S&P/HKEx Large Cap Index
+HKSPGEM Index	S&P/Hong Kong GEM Index
+HSCEI Index	Hang Seng China Enterprises In
+HSCCI Index	Hang Seng China-Affiliated Cor
+HSFML25 Index	Hang Seng China (Hong Kong-lis
+H-FIN Index	Hang Seng SCHK China Financial
+HSML100 Index	Hang Seng China (Hong Kong-lis
+HSHK35 Index	Hang Seng HK 35
+CNL Index	Bloomberg China Large & Mid Ca
+SHSZ300 Index	Shanghai Shenzhen CSI 300 Inde
+SHASHR Index	Shanghai Stock Exchange A Shar
+SHBSHR Index	Shanghai Stock Exchange B Shar
+SZASHR Index	Shenzhen Stock Exchange A Shar
+SZBSHR Index	Shenzhen Stock Exchange B Shar
+SHCOMP Index	Shanghai Stock Exchange Compos
+SZCOMP Index	Shenzhen Stock Exchange Compos
+SSE180 Index	SSE 180 Index
+SSE50 Index	Shanghai Stock Exchange SSE 50
+SHNCOMP Index	Shanghai New Composite Index
+CBSE50 Index	Beijing Stock Exchange 50 Inde
+SICOM Index	Shenzhen Component Index
+SZ399006 Index	ChiNext Index
+SHCSI100 Index	CSI A100 Index - Shanghai
+SZSMEC Index	China Shenzhen Small Medium En
+SZ399550 Index	CCTV 50 INDEX
+SZ399330 Index	Shenzhen 100 Index
+SZ399005 Index	Shenzhen Stock Exchange Small
+SH000905 Index	CSI Smallcap 500 Index - Shang
+XIN0I Index	FTSE China 50 Index HKD
+TWL Index	Bloomberg Taiwan Large & Mid C
+TWSE Index	Taiwan Stock Exchange Weighted
+TWOTCI Index	Taiwan TPEx Exchange Index
+TW50 Index	FTSE TWSE Taiwan 50 Index
+KRL Index	Bloomberg South Korea Large &
+KRX100 Index	KRX 100 Index
+KOSPI Index	Korea Stock Exchange KOSPI Ind
+KOSPI2 Index	Korea Stock Exchange KOSPI 200
+KOSPI100 Index	Korea Stock Price 100 Composit
+KOSPI50 Index	Korea Stock Price 50 Composite
+KOSDAQ Index	Korea Securities Dealers Assoc
+AUL Index	Bloomberg Australia Large & Mi
+AS51 Index	S&P/ASX 200
+AS52 Index	S&P/ASX 300
+AS30 Index	Australian Stock Exchange All
+NZPL Index	Bloomberg New Zealand Large &
+NZSE50FG Index	S&P/NZX 50 Total Return Index
+NZSE10 Index	S&P/NZX 10 Index
+NZSE Index	S&P/NZX All Index
+PKL Index	Bloomberg Pakistan Large & Mid
+KSE100 Index	Karachi Stock Exchange KSE-100
+KSE30 Index	Karachi Stock Exchange KSE30 I
+KSE Index	Pakistan Karachi All Share KSE
+CSEALL Index	Sri Lanka Colombo Stock Exchan
+THL Index	Bloomberg Thailand Large & Mid
+SET Index	Stock Exchange of Thailand SET
+SET50 Index	Stock Exchange of Thailand SET
+IDL Index	Bloomberg Indonesia Large & Mi
+JCI Index	Jakarta Stock Exchange Composi
+LQ45 Index	Jakarta Stock Exchange LQ45 In
+INL Index	Bloomberg India Large & Mid Ca
+SENSEX Index	BSE SENSEX
+NIFTY Index	NSE Nifty 50 Index
+BSE500 Index	BSE 500
+BSE200 Index	BSE 200
+BSE100 Index	BSE 100
+SGPL Index	Bloomberg Singapore Large & Mi
+STI Index	Straits Times Index STI
+FSTAS Index	FTSE ST All-Share Index
+MYL Index	Bloomberg Malaysia Large & Mid
+FBMKLCI Index	FTSE Bursa Malaysia KLCI Index
+FBMEMAS Index	FTSE Bursa Malaysia EMAS Index
+PHL Index	Bloomberg Philippines Large &
+PCOMP Index	Philippines Stock Exchange PSE
+VNINDEX Index	Vietnam Ho Chi Minh Stock Inde
+VHINDEX Index	Vietnam Hanoi Stock Exchange E
+DSEX Index	Bangladesh Dhaka Stock Exchang
+DS30 Index	Bangladesh Dhaka Stock Exchang
+MSETOP Index	Mongolia Stock Exchange Top 20
+LSXC Index	Laos Securities Exchange Compo
+US Index	Bloomberg United States Large
+B500 Index	Bloomberg US Large Cap Price R
+AGGE Index	Bloomberg US Aggregate Equity
+INDU Index	Dow Jones Industrial Average
+TRAN Index	Dow Jones Transportation Avera
+UTIL Index	Dow Jones Utility Average
+COMP Index	Dow Jones Composite Average
+DWCF Index	Dow Jones US Total Stock Marke
+OEX Index	S&P 100 Index
+SPX Index	S&P 500 INDEX
+MID Index	S&P Midcap 400 Index
+SML Index	S&P Small Cap 600 Index
+SPR Index	S&P 1500 Composite Index
+NYA Index	New York Stock Exchange Compos
+NYID Index	New York Stock Exchange US 100
+NYIID Index	New York Stock Exchange Intern
+NYYID Index	New York Stock Exchange TMT In
+NYLID Index	New York Stock Exchange World
+VALUA Index	Value Line Arithmetic
+CCMP Index	NASDAQ Composite Index
+CFIN Index	NASDAQ Other Financial Index
+NYP Index	NYSE Healthcare Index
+NYK Index	NYSE Financial Index
+CIND Index	NASDAQ Industrial Index
+CTRN Index	NASDAQ Transportation Index
+CUTL Index	NASDAQ Telecommunications Inde
+CINS Index	NASDAQ Insurance Index
+CBNK Index	NASDAQ Bank Index
+NDX Index	Nasdaq-100 Index
+NDF Index	NASDAQ 100 Financial Index
+IXK Index	NASDAQ Computer Index
+NBI Index	Nasdaq Biotechnology Index
+QMI Index	NASDAQ 100 Pre Market Indicato
+QIV Index	NASDAQ 100 After Hours Indicat
+XMI Index	New York Stock Exchange ARCA M
+XAX Index	NYSE American Composite Index
+XII Index	New York Stock Exchange ARCA I
+XCI Index	New York Stock Exchange ARCA C
+XOI Index	NYSE Arca Exchange Oil Index
+OSX Index	Philadelphia Stock Exchange Oi
+RIY Index	Russell 1000 Index
+RTY Index	Russell 2000 Index
+RAY Index	Russell 3000 Index
+XAU Index	Philadelphia Stock Exchange Go
+SOX Index	Philadelphia Stock Exchange Se
+BKX Index	KBW Bank Index
+UTY Index	PHLX Utility Sector
+BCA60P Index	Bloomberg Canada 60 Price Retu
+SPTSX Index	S&P/TSX Composite Index
+TXEQ Index	S&P/TSX Equity Index
+SPTSX60 Index	S&P/TSX 60 Index
+SPTSXVEN Index	S&P/TSX Venture Composite Inde
+MXPRL Index	Bloomberg Mexico Large & Mid C
+MEXBOL Index	S&P/BMV IPC
+INMEX Index	S&P/BMV INMEX Index
+IRT Index	S&P/BMV IRT
+FTBIVA Index	FTSE BIVA Price Return Index
+BVPSBVPS Index	Bolsa de Valores de Panama Gen
+MERVAL Index	S&P MERVAL Index TR (ARS)
+IBG Index	S&P/BYMA Argentina General Ind
+BRPRL Index	Bloomberg Brazil Large & Mid C
+IBOV Index	Ibovespa Brasil Sao Paulo Stoc
+IBX Index	Sao Paulo Stock Exchange IBrX
+IBOVIEE Index	Sao Paulo Stock Exchange Elect
+IGCX Index	Bovespa Exchange Shares With D
+IVBX2 Index	Bovespa Valor Second Line Inde
+IBX50 Index	Sao Paulo Stock Exchange 50 In
+CLPL Index	Bloomberg Chile Large & Mid Ca
+IPSA Index	S&P/CLX IPSA CLP TR
+IGPA Index	S&P/CLX IGPA CLP TR
+INTER10 Index	S&P/CLX INTER-10 CLP TR
+CHILE65 Index	Chile 65 Index
+CHLRGCAP Index	Chile Large Cap Index
+CHSMLCAP Index	Chile Small Cap Index
+IBVC Index	Caracas Stock Exchange Stock M
+PEL Index	Bloomberg Peru Large & Mid Cap
+SPBLPGPT Index	S&P/BVL Peru General Total Ret
+SPBL25PT Index	S&P/BVL LIMA 25 Total Return P
+COL Index	Bloomberg Colombia Large & Mid
+COLCAP Index	MSCI COLCAP Index
+COLSC Index	Colombia ICSC index
+COLIR Index	Colombia COLIR Index
+COLEQTY Index	Colombia IEQC Index
+BSX Index	Bermuda Stock Exchange Index
+JMSMX Index	Jamaica Stock Exchange Market
+JMJMX Index	JSE Junior Mkt Indx
+ED283183 Corp	VENZ 9 3/8 01/13/34
+YW370853 Corp	CAN 3 1/4 12/01/34
+91282CMM Govt	T 4 5/8 02/15/35
+ZJ328828 Corp	CHILE 4.95 01/05/36
+YW830039 Corp	PERU 5 3/8 02/08/35
+EK985952 Corp	BTPCL 5 03/01/35
+ZM215990 Corp	MEX 6.35 02/09/35
+AZ176124 Corp	PERUGB 5.4 08/12/34
+ZF497784 Corp	BRAZIL 6 1/8 03/15/34
+ZN384489 Corp	PANAMA 6.4 02/14/35
+ZG019317 Corp	COLOM 8 11/14/35
+EK169342 Corp	MBONO 7 3/4 11/23/34
+AW627458 Corp	COLTES 7 1/4 10/18/34
+ZO305198 Corp	ARGENT 4 1/8 07/09/35
+ZF160325 Corp	BNTNF 10 01/01/35
+AX800911 Corp	RUSSIA 5.1 03/28/35
+BP977825 Corp	SWISS 0 1/4 06/23/35
+ZM652763 Corp	DGB 2 1/4 11/15/33
+ZF411707 Corp	SGB 2 1/4 05/11/35
+YS326771 Corp	DBR 2 1/2 02/15/35
+ZF793713 Corp	NETHER 2 1/2 07/15/34
+ZF276188 Corp	IRISH 2.6 10/18/34
+ZB628316 Corp	RFGB 3 09/15/34
+AW984753 Corp	CYPRUS 2 3/4 02/26/34
+YR001972 Corp	RAGB 2.95 02/20/35
+ZD153851 Corp	EU 3 12/04/34
+ZD454900 Corp	CROATI 3 3/8 03/12/34
+YS492770 Corp	PGB 3 06/15/35
+EK812857 Corp	SLOREP 1 1/2 03/25/35
+YS416909 Corp	BGB 3.1 06/22/35
+ZJ607405 Corp	LATVIA 3 7/8 07/12/33
+YX393934 Corp	SPGB 3.45 10/31/34
+YR156127 Corp	FRTR 3.2 05/25/35
+YS603944 Corp	GGB 3 5/8 06/15/35
+ZL074879 Corp	SLOVGB 3 3/4 02/23/35
+QJ202347 Corp	LITHUN 2 1/8 10/22/35
+YS466858 Corp	BTPS 3.65 08/01/35
+YR244262 Corp	NGB 3 3/4 06/12/35
+BU685566 Corp	CZGB 3 1/2 05/30/35
+ZF031623 Corp	ILGOV 4 03/30/35
+YR075593 Corp	UKT 4 1/2 03/07/35
+YR715181 Corp	QATAR 4 7/8 02/27/35
+ZF208232 Corp	KSA 5 01/16/34
+ZB292176 Corp	POLGB 5 10/25/34
+ZI719349 Corp	HGB 7 10/24/35
+ZH309327 Corp	ICEGB 7 09/17/35
+YU020606 Corp	TURKEY 6 1/2 01/03/35
+YV487667 Corp	ROMGB 6 3/4 04/25/35
+EK773288 Corp	SAGB 8 7/8 02/28/35
+ZH859732 Corp	RFLB 11 1/4 03/15/34
+YV463872 Corp	UKRAIN 1 3/4 02/01/35
+YS766840 Corp	NIGB 22.6 01/29/35
+YU359570 Corp	TURKGB 27.7 09/27/34
+AS829561 Corp	LEBAN 8 1/4 05/17/34
+EI035358 Corp	RPGB 9 1/4 11/05/34
+YS443328 Corp	JGB 1.2 12/20/34
+YS255438 Corp	TGB 1 1/2 02/13/35
+YT304720 Corp	CGB 2.04 11/25/34
+YS791346 Corp	THAIGB 2.41 03/17/35
+YR828332 Corp	SIGB 2 3/4 03/01/35
+YU337204 Corp	KTB 3 12/10/34
+AZ460230 Corp	MGS 3.828 07/05/34
+ZK214470 Corp	ACGB 3 1/2 12/21/34
+ZN271569 Corp	NZGB 4 1/4 05/15/34
+ZF096712 Corp	INDON 4.7 02/10/34
+YV448316 Corp	PHILIP 4 3/4 03/05/35
+YU189775 Corp	IGB 6.79 10/07/34
+YW826083 Corp	INDOGB 6 3/4 07/15/35
+YS585186 Corp	PAKGB 12 01/16/35

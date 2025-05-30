@@ -12,6 +12,7 @@ dist/
 build/
 old/
 .venv/
+stale_files
 
 # Logs and temp files
 *.log

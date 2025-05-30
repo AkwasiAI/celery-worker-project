@@ -458,6 +458,8 @@ INSIGHTS_CHANGES_PROMPT = '''Write concise, 50-word rationales for portfolio cha
 - For any new positions added in the current allocation relative to the prior allocation, provide a 50-word reasoning grounded in the Orasis investment principles.
 - For any positions sold from the prior allocation, provide a 50-word reasoning grounded in the Orasis investment principles.
 
+** formatting constraints ** : Use Positions Added and Positions Sold for necessary headers, do not use terms like "dropped", use "sold" instead.
+
 The prior allocation is:
 {old_portfolio_weights}
 

@@ -61,15 +61,26 @@ async def calculate_benchmark_metrics(noclient, portfolio_json, current_date):
         assets = portfolio_json['portfolio']['assets']
         print(f"Found {len(assets)} assets")
 
-        # Include both LONG and SHORT positions
-        included_assets = [a for a in assets if a['position'] in ['LONG', 'SHORT']]
-        print(f"{len(included_assets)} tradable positions retained (LONG + SHORT)")
+        # Only use assets with non-zero weight, not removed, and not a benchmark ticker
+        benchmark_tickers = ['^GSPC', 'URTH']
+        included_assets = [
+            a for a in assets 
+            if a['position'] in ['LONG', 'SHORT']
+            and not a.get('wasRemoved', False)
+            and a['weight'] != 0
+            and a['ticker'] not in benchmark_tickers
+        ]
+        print(f"{len(included_assets)} tradable positions retained (LONG + SHORT, nonzero, not removed, not benchmark)")
 
-        # Build ticker -> signed weight mapping
-        raw_weights = {
-            a['ticker']: a['weight'] if a['position'] == 'LONG' else -a['weight']
-            for a in included_assets
-        }
+        # Build ticker -> signed weight mapping, using the latest occurrence
+        raw_weights = {}
+        for a in included_assets:
+            # If a ticker is duplicated, sum the weights (could also just keep the first or max)
+            weight = a['weight'] if a['position'] == 'LONG' else -a['weight']
+            if a['ticker'] in raw_weights:
+                raw_weights[a['ticker']] += weight
+            else:
+                raw_weights[a['ticker']] = weight
 
         # Validate tickers (using yf.Ticker.info as a basic test)
         valid_weights = {}
@@ -97,7 +108,6 @@ async def calculate_benchmark_metrics(noclient, portfolio_json, current_date):
         start_date = end_date - pd.Timedelta(days=365)
 
         # Download prices for portfolio tickers and benchmarks
-        benchmark_tickers = ['^GSPC', 'URTH']
         all_tickers = tickers + benchmark_tickers
         print(f"Fetching data for: {all_tickers}")
 
@@ -115,32 +125,33 @@ async def calculate_benchmark_metrics(noclient, portfolio_json, current_date):
         weights = [w / total_weight for w in weights]
         tickers = available_tickers
 
-        # Keep only the available tickers and benchmarks in data
-        data = data[tickers + benchmark_tickers].dropna(how='all')
+        # Final columns (portfolio + benchmarks)
+        columns_to_use = [t for t in tickers + benchmark_tickers if t in data.columns]
+        data = data[columns_to_use].dropna(how='all')
 
-        # Calculate daily returns
-        returns = data.pct_change().dropna()
+        # Calculate daily returns, disabling fill_method to fix the warning
+        returns = data.pct_change(fill_method=None).dropna()
 
-        # After pct_change, ensure we only use days where all portfolio tickers have data
-        returns = returns.dropna(subset=tickers, how='any')
+        # Only keep returns rows where all portfolio tickers have data
+        portfolio_in_returns = [t for t in tickers if t in returns.columns]
+        returns = returns.dropna(subset=portfolio_in_returns, how='any')
         if returns.empty:
             raise ValueError("Not enough price data to compute returns.")
 
-        # Resync tickers and weights with returns columns (handles late missing tickers)
+        # FINAL strict sync: tickers/weights = those in both tickers and returns.columns
         final_tickers = [t for t in tickers if t in returns.columns]
         if not final_tickers:
             raise ValueError("No tickers left with valid returns data.")
-
         final_weights = [valid_weights[t] for t in final_tickers]
         total_weight = sum(abs(w) for w in final_weights)
         final_weights = [w / total_weight for w in final_weights]
 
-        # Compute portfolio returns
+        # Now: final_tickers and final_weights are SAME LENGTH and MATCH returns columns
         portfolio_returns = (returns[final_tickers] * final_weights).sum(axis=1)
         if portfolio_returns.empty:
             raise ValueError("No valid portfolio returns could be calculated.")
 
-        # Benchmark returns
+        # Benchmark returns (handle possibly missing benchmark columns)
         sp500_returns = returns['^GSPC'] if '^GSPC' in returns.columns else pd.Series(index=portfolio_returns.index, data=np.nan)
         msci_returns = returns['URTH'] if 'URTH' in returns.columns else pd.Series(index=portfolio_returns.index, data=np.nan)
 

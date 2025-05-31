@@ -96,7 +96,7 @@ NEWS_CATEGORIES = [
 NEWS_PER_CATEGORY = 5
 MAX_DAYS_LOOKBACK = 2 
 HALLUCINATION_CHECK_ENABLED = False
-MAX_ITERATION = 3 
+MAX_ITERATION = 4
 
 DIGESTS_FILE = "news_human_digests.json" # Changed output file name
 CORPORA_FILE = "news_llm_corpora.json"   # Changed output file name
@@ -852,7 +852,7 @@ async def run_full_news_agent():
         
         final_state_for_category = None
         try:
-            configuration = {"recursion_limit": 50} 
+            configuration = {"recursion_limit": 70} 
             async for step_output in graph.astream(initial_state, config=configuration):
                 node_name = list(step_output.keys())[0]
                 final_state_for_category = step_output[node_name]

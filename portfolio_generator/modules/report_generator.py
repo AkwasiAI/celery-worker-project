@@ -28,7 +28,7 @@ import os
 from google import genai
 from google.genai import types
 from portfolio_generator.modules.another import run_full_news_agent
-from portfolio_generator.modules.portfolio_generation_agent2 import generate_portfolio_executive_summary
+from portfolio_generator.modules.portfolio_generation_agent2 import generate_portfolio_executive_summary_sync
 from portfolio_generator.modules.news_update_generator import generate_news_update_section
 from portfolio_generator.modules.utils import news_digest_json_to_markdown, clean_markdown_block
 from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, predict_tomorrow
@@ -447,13 +447,39 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         firebase_downloader = FirestoreDownloader()
         previous_portfolio = firebase_downloader.get_latest("portfolio_weights")
 
-        structured_response = await generate_portfolio_executive_summary(
-                            llm_corpus_content=formatted_search_results, # Replace with your actual data
-                            previous_portfolio_data=previous_portfolio, # Replace with your actual data
+        # structured_response = await generate_portfolio_executive_summary(
+        #                     llm_corpus_content=formatted_search_results, # Replace with your actual data
+        #                     previous_portfolio_data=previous_portfolio, # Replace with your actual data
+        #                     fully_formatted_base_prompt=base_system_prompt,
+        #                     fully_formatted_exec_detailed_prompt=exec_summary_prompt,
+        #                     max_iterations=2,
+        #                 )
+        
+        log_info("Trying to pull George's feedback from The Scratchpad where it lives")
+
+        try:
+            db = firestore.Client(project="hedgefundintelligence", database="hedgefundintelligence")
+            docs = db.collection("alternative-portfolio-scratchpad").where("is_latest", "==", True).limit(1).stream()
+            george_feedback = next(docs, None)
+            george_feedback = george_feedback.to_dict()["scratchpad"] if george_feedback else None
+
+            log_success("successfully pulled George's Feedback!!")
+        except Exception as e:
+            log_error("I couldn't pull George's feedback, continuing without it.")
+            george_feedback = ""
+
+        
+        structured_response = await generate_portfolio_executive_summary_sync(
+                            llm_corpus_content=formatted_search_results,
+                            previous_portfolio_data=previous_portfolio,
                             fully_formatted_base_prompt=base_system_prompt,
                             fully_formatted_exec_detailed_prompt=exec_summary_prompt,
-                            max_iterations=2,
+                            georges_latest_feedback=george_feedback, # Pass George's feedback
+                            # google_api_key=GEMINI_API_KEY, # Use the one loaded at the top for standalone
+                            # log_file_path=standalone_log_file,
+                            max_iterations=2, 
                         )
+
         
         # Store the markdown summary in the report sections
         report_sections["Executive Summary - Comprehensive Portfolio Summary"] = clean_markdown_block(structured_response["summary"])
@@ -1061,7 +1087,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                         log_warning("Could not pull Old Alternative portfolio weights")
                     
                     # Generate and upload alternative report for ePubs
-                    await generate_and_upload_alternative_report(
+                    _, new_alt_weights, new_alt_report = await generate_and_upload_alternative_report(
                         current_report_content_md = report_content,
                         current_report_firestore_id = firestore_report_doc_id,
                         gemini_model_name="gemini-2.5-pro-preview-05-06",
@@ -1070,6 +1096,9 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                         llm_news_corpus_str=formatted_search_results,
                         previous_report_portfolio_json_str=old_alternative_portfolio_weights
                     )
+                    from portfolio_generator.modules.alt_sections_creator import create_alt_sections
+                    
+                    risk_content_alt  = await create_alt_sections(client, formatted_search_results, new_alt_report, investment_principles, new_alt_weights, old_alternative_portfolio_weights)
                     
                     log_success("Report generation completed successfully!")
                 except Exception as e:

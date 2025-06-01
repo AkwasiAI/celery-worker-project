@@ -536,7 +536,7 @@ async def generate_and_upload_alternative_report(
         alt_scratchpad_doc_ref.set(scratchpad_payload)
         log_success(f"Alternative report scratchpad uploaded with doc ID: {alt_scratchpad_doc_ref.id}")
 
-        return alt_report_doc_ref.id, change_rationale_scratchpad_json,alternative_report_md # Return ID and scratchpad content
+        return alt_report_doc_ref.id, alt_weights_json, alternative_report_md # Return ID and scratchpad content
 
     except Exception as e:
         log_error(f"Error during Firestore upload for alternative report elements: {e}")

@@ -25,3 +25,4 @@ langgraph==0.4.5
 langchain_anthropic==0.3.13
 langchain_google_genai==2.1.4
 scikit-learn
+fpdf2>=2.7.0                    # PDF generation

@@ -1138,6 +1138,34 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     except Exception as e_rb:
         log_warning(f"Failed to upload Risk & Benchmark report: {e_rb}")
 
+    # Generate and upload PDF version of the report
+    try:
+        # Import the PDF service
+        from portfolio_generator.modules.pdf_report import ReportPDFService
+
+        # Only run PDF generation if we have report sections
+        if report_sections:
+            pdf_service = ReportPDFService(bucket_name="reportpdfhedgefundintelligence")
+            
+            log_info("Generating PDF report...")
+            
+            pdf_result = pdf_service.generate_and_upload_pdf(
+                report_sections=report_sections,
+                report_date=current_date,
+                upload_to_gcs=not dry_run and not test_mode,
+                keep_local_copy=test_mode
+            )
+            
+            if pdf_result.get('gcs_path'):
+                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
+            
+            if pdf_result.get('local_path'):
+                log_info(f"PDF saved locally: {pdf_result['local_path']}")
+                
+    except Exception as e:
+        log_error(f"PDF generation failed: {e}")
+        # Continue execution - PDF generation failure shouldn't stop the report
+
     try:
 
         # List of your JSON files

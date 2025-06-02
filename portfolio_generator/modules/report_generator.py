@@ -1179,7 +1179,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             log_info("Generating PDF report...")
             
             pdf_result = pdf_service.generate_and_upload_pdf(
-                report_sections=report_sections,
+                report_sections=report_content,
                 report_date=current_date,
                 upload_to_gcs=not dry_run and not test_mode,
                 keep_local_copy=test_mode

@@ -163,7 +163,7 @@ async def generate_full_alternative_report_llm(
         *   Construct a new portfolio of 10-15 tickers.
         *   ALL tickers MUST be selected from the "PREFERRED_TICKERS List" provided.
         *   Allocations MUST sum exactly to 100.0%. Use one decimal place for percentages.
-        *   Assign realistic time horizons (e.g., "1-3 months", "6-12 months", "1-2 years") and confidence levels ("High", "Medium", "Low").
+        *   Assign realistic time horizons (e.g., "1-3 months", "3-6 months", "6-12 months", "12-18 months", "18+ months") and confidence levels ("High", "Medium", "Low").
     4.  **Update Key Sections:**
         *   **Executive Summary:** Rewrite this to reflect your alternative strategy, market outlook, and the new portfolio. Ensure it includes:
             *   A Markdown table for the new portfolio holdings.

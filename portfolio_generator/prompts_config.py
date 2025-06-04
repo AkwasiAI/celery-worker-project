@@ -162,18 +162,18 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         *   `Asset/Ticker`: Use the real, verifiable ticker symbol from the list.
         *   `Position Type`: Assume `Long` for most positions. Include 1-2 genuine `Short` positions if justified by a fundamentally negative forward outlook for that specific asset/sector, explaining the rationale briefly in the main report body (not required in the summary itself).
         *   `Allocation %`: Assign *plausible* percentage allocations. **These MUST sum exactly to 100.0%.** Use one decimal place.
-        *   `Time Horizon`: Assign realistic, forward-looking horizons (e.g., `"1-3 months"`, `"3-6 months"`, `"6-12 months"`, `"1-2 years"`, `"2-3 years"`).
+        *   `Time Horizon`: Assign realistic, forward-looking horizons (e.g., `"1-3 months"`, `"3-6 months"`, `"6-12 months"`, `"12-18 months"`, `"18+ months"`).
         *   `Confidence Level`: Assign a confidence level (e.g., `Medium`, `High`, `Very High`).
    
         
     *   **Ticker Source List (PREFERRED_TICKERS):**
         ```csv
         Category,Ticker,Name
-        US-Listed Shipping Companies,HAFNI.OL,"Hafnia Limited (Oslo Listing, Note: Category US-Listed is a mismatch. US OTC is HAFNF.)"
+        US-Listed Shipping Companies,HAFNI.OL,Hafnia Limited (Oslo Listing)
         US-Listed Shipping Companies,STNG,Scorpio Tankers Inc.
         US-Listed Shipping Companies,TRMD,TORM plc (ADR)
         US-Listed Shipping Companies,FRO,Frontline plc
-        US-Listed Commodity Companies,ECO,"Ecolab Inc. (If Ecopetrol EC was intended, this needs changing)"
+        US-Listed Commodity Companies,ECO,"Okeanis Eco Tankers Corp"
         US-Listed Shipping Companies,DHT,DHT Holdings, Inc.
         Non-US-Listed Shipping Companies,EURN.BR,Euronav NV
         US-Listed Shipping Companies,INSW,International Seaways, Inc.
@@ -183,7 +183,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         US-Listed Shipping Companies,PSHG,Performance Shipping Inc.
         US-Listed Shipping Companies,TORO,Toro Corp.
         US-Listed Shipping Companies,TNK,Teekay Tankers Ltd.
-        US-Listed Shipping Companies,PXS,"Pyxis Tankers Inc. (Note: Became Toro Corp., likely delisted)"
+        US-Listed Shipping Companies,PXS,"Pyxis Tankers Inc."
         US-Listed Shipping Companies,TOPS,TOP Ships Inc.
         US-Listed Shipping Companies,DSX,Diana Shipping Inc.
         US-Listed Shipping Companies,GNK,Genco Shipping & Trading Limited
@@ -195,7 +195,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         Non-US-Listed Shipping Companies,HSHP.OL,Himalaya Shipping Ltd.
         US-Listed Shipping Companies,EDRY,EuroDry Ltd.
         US-Listed Shipping Companies,CTRM,Castor Maritime Inc.
-        US-Listed Shipping Companies,ICON,"Iconix Brand Group, Inc. (Note: If different ""ICON"" was intended, clarify)"
+        US-Listed Shipping Companies,ICON,Icon Energy Corp
         US-Listed Shipping Companies,GLBS,Globus Maritime Limited
         US-Listed Shipping Companies,CMRE,Costamare Inc.
         US-Listed Shipping Companies,DAC,Danaos Corporation
@@ -207,7 +207,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         Non-US-Listed Shipping Companies,MAERSK-B.CO,A.P. Møller - Mærsk A/S B
         Non-US-Listed Shipping Companies,BWLPG.OL,BW LPG Limited
         US-Listed Shipping Companies,LPG,Dorian LPG Ltd.
-        US-Listed Commodity Companies,CCEC,"China Communications Construction Co. Ltd. (ADR is CCECF, HK is 1800.HK - Clarify if different CCEC was meant)"
+        US-Listed Commodity Companies,CCEC,Capital Clean Energy Carriers Corp
         US-Listed Shipping Companies,GASS,StealthGas Inc.
         US-Listed Shipping Companies,DLNG,Dynagas LNG Partners LP
         Non-US-Listed Shipping Companies,AGAS.OL,Avance Gas Holding Ltd.
@@ -215,7 +215,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         US-Listed Shipping Companies,FLNG,FLEX LNG Ltd.
         US-Listed Offshore Energy Companies,RIG,Transocean Ltd.
         US-Listed Offshore Energy Companies,HLX,Helix Energy Solutions Group, Inc.
-        US-Listed Shipping Companies,PRS,"ProSight Global, Inc. (Acquired/Delisted - Note: If different PRS was intended, clarify)"
+        US-Listed Shipping Companies,1Q6.F,Prosafe SE
         Non-US-Listed Offshore Energy Companies,SBMO.AS,SBM Offshore N.V.
         US-Listed Offshore Energy Companies,TDW,Tidewater Inc.
         US-Listed Commodity Companies,RIO,Rio Tinto Group plc (ADR)
@@ -286,7 +286,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
     *   The entire output (including table and hidden JSON) should aim to be concise, ideally under **500 words**.
     *   Ensure all tickers used are real, verifiable, and selected *only* from the provided `PREFERRED_TICKERS` list. Do not invent tickers.
     *   Maintain a professional and **forward-looking** tone.
-    *   Use realistic time horizon formats (e.g., `"1-3 months"`, `"6-12 months"`, `"1-2 years"`).
+    *   Use realistic time horizon formats (e.g., `"1-3 months"`, `"3-6 months"`,`"6-12 months"`,`"12-18 months"`, `"18+ months"`).
 
 **--- GOLD STANDARD EXAMPLE OUTPUT (Forward-Looking Adaptation) ---**
 
@@ -309,34 +309,34 @@ Leveraging Orasis' core thesis on analyzing trade flow shifts, the portfolio foc
 
 | Asset/Ticker | Position Type | Allocation % | Time Horizon  | Confidence Level |
 | :----------- | :------------ | :----------- | :----------- | :--------------- |
-| XOM          | Long          | 12.0%        | "1-2 years"  | High             |
-| SHEL         | Long          | 10.0%        | "1-2 years"  | High             |
-| RIO          | Long          | 8.0%         | "1-2 years"  | Medium           |
+| XOM          | Long          | 12.0%        | "12-18 months"  | High             |
+| SHEL         | Long          | 10.0%        | "12-18 months"  | High             |
+| RIO          | Long          | 8.0%         | "12-18 months"  | Medium           |
 | VALE         | Long          | 7.0%         | "6-12 months"| Medium           |
 | STNG         | Long          | 9.0%         | "6-12 months"| High             |
 | FRO          | Long          | 8.0%         | "3-6 months" | High             |
 | GOGL         | Long          | 6.0%         | "3-6 months" | Medium           |
 | SBLK         | Long          | 5.0%         | "6-12 months"| Medium           |
-| WPM          | Long          | 6.0%         | "1-2 years"  | Medium           |
+| WPM          | Long          | 6.0%         | "12-18 months"  | Medium           |
 | ALB          | Long          | 7.0%         | "2-3 years"  | Medium           |
 | TDW          | Long          | 7.0%         | "1-3 months" | High             |
-| SPY          | Long          | 15.0%        | "1-2 years"  | High             |
+| SPY          | Long          | 15.0%        | "12-18 months"  | High             |
 | **Total**    |               | **100.0%**   |              |                  |
 
 <!-- PORTFOLIO_POSITIONS_JSON:
 [
-  {{"asset": "XOM", "position_type": "Long", "allocation_percent": 12.0, "time_horizon": "1-2 years", "confidence_level": "High"}},
-  {{"asset": "SHEL", "position_type": "Long", "allocation_percent": 10.0, "time_horizon": "1-2 years", "confidence_level": "High"}},
-  {{"asset": "RIO", "position_type": "Long", "allocation_percent": 8.0, "time_horizon": "1-2 years", "confidence_level": "Medium"}},
+  {{"asset": "XOM", "position_type": "Long", "allocation_percent": 12.0, "time_horizon": "12-18 months", "confidence_level": "High"}},
+  {{"asset": "SHEL", "position_type": "Long", "allocation_percent": 10.0, "time_horizon": "12-18 months", "confidence_level": "High"}},
+  {{"asset": "RIO", "position_type": "Long", "allocation_percent": 8.0, "time_horizon": "12-18 months", "confidence_level": "Medium"}},
   {{"asset": "VALE", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "6-12 months", "confidence_level": "Medium"}},
   {{"asset": "STNG", "position_type": "Long", "allocation_percent": 9.0, "time_horizon": "6-12 months", "confidence_level": "High"}},
   {{"asset": "FRO", "position_type": "Long", "allocation_percent": 8.0, "time_horizon": "3-6 months", "confidence_level": "High"}},
   {{"asset": "GOGL", "position_type": "Long", "allocation_percent": 6.0, "time_horizon": "3-6 months", "confidence_level": "Medium"}},
   {{"asset": "SBLK", "position_type": "Long", "allocation_percent": 5.0, "time_horizon": "6-12 months", "confidence_level": "Medium"}},
-  {{"asset": "WPM", "position_type": "Long", "allocation_percent": 6.0, "time_horizon": "1-2 years", "confidence_level": "Medium"}},
+  {{"asset": "WPM", "position_type": "Long", "allocation_percent": 6.0, "time_horizon": "12-18 months", "confidence_level": "Medium"}},
   {{"asset": "ALB", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "2-3 years", "confidence_level": "Medium"}},
   {{"asset": "TDW", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "1-3 months", "confidence_level": "High"}},
-  {{"asset": "SPY", "position_type": "Long", "allocation_percent": 15.0, "time_horizon": "1-2 years", "confidence_level": "High"}}
+  {{"asset": "SPY", "position_type": "Long", "allocation_percent": 15.0, "time_horizon": "12-18 months", "confidence_level": "High"}}
 ]
 -->
 

@@ -13,31 +13,33 @@ TICKERS_TO_PREDICT = [
     "CCMP", "CAC", "DAX", "IBEX", "SMI",
     "2020.OL", "JIN.OL", "BELCO.OL", "COOL.OL", "SPM.MI",
     "^DJI", "^GSPC", "^GSPTSE", "^MXX", "^BVSP", "^STOXX50E", "^FTSE",
-    "^N225", "^HSI", "^AXJO",
+    "^N225", "^HSI", "^AXJO" ]
 
-]
-
-    # # --- Part 2: Symbols That Failed Last Test (2 symbols - for re-test) ---
-    # "^FTMIB",       # FTSE MIB Italy
+    # # # --- Part 2: Symbols That Failed Last Test (2 symbols - for re-test) ---
+    # "FTSEMIB.MI",       # FTSE MIB Italy
     # "000300.SS",    # CSI 300 Shanghai
+    # "CL=F", # "CLA",
+    # "BZ=F", # "COA",
+    # "HO=F", # "HOA",
+    # "NG=F", # "NGA",
+    # "TTF=F", # "TZTA",
+    # "^OMX", # "OMX",
 
     # # --- Part 3: Items Previously Set Aside (14 symbols - mostly expected to fail with /quote/) ---
     # # Commodity Codes:
     # "RBTA",
-    # "CLA",
-    # "COA",
+
     # "QSA",
     # "XBA",
-    # "HOA",
-    # "NGA",
-    # "TZTA",
+
     # "LMAHDS03",
     # "LMCADS03",
     # "LMNIDS03",
     # "IOEA",
     # # Generic Index Placeholders:
-    # "OMX",
     # "WORLD"
+
+
 
 
 if not firestore_helper:

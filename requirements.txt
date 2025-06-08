@@ -28,4 +28,7 @@ scikit-learn
 weasyprint
 markdown
 PyPDF2         # Optional: only if you use PDF verification
+pdfplumber
+python-docx
+pandas
 # fpdf2>=2.7.0                    # PDF generation

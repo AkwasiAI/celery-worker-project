@@ -12,6 +12,65 @@ import re
 from celery_config import celery_app
 import logging
 
+def extract_text_from_url(file_url, file_type):
+    import requests, io
+    log_info(f"Fetching file from URL: {file_url} (type: {file_type})")
+    response = requests.get(file_url)
+    response.raise_for_status()
+    file_content = io.BytesIO(response.content)
+    text = ""
+    if file_type == "pdf":
+        try:
+            import pdfplumber
+            with pdfplumber.open(file_content) as pdf:
+                for i, page in enumerate(pdf.pages):
+                    page_text = page.extract_text() or ""
+                    text += page_text + "\n"
+                    log_info(f"Extracted text from PDF page {i + 1}")
+        except Exception as e:
+            log_warning(f"pdfplumber failed, trying PyPDF2: {e}")
+            try:
+                import PyPDF2
+                reader = PyPDF2.PdfReader(file_content)
+                for i, page in enumerate(reader.pages):
+                    text += page.extract_text() or ""
+                    log_info(f"Extracted text from PDF page {i + 1} using PyPDF2")
+            except Exception as e:
+                log_error(f"Could not extract text from PDF: {e}")
+                text = f"[Could not extract text from PDF: {e}]"
+    elif file_type in ("docx", "word"):
+        try:
+            from docx import Document
+            doc = Document(file_content)
+            text = "\n".join([para.text for para in doc.paragraphs])
+            log_info("Extracted text from DOCX file.")
+        except Exception as e:
+            log_error(f"Could not extract text from DOCX: {e}")
+            text = f"[Could not extract text from DOCX: {e}]"
+    elif file_type == "csv":
+        try:
+            import pandas as pd
+            df = pd.read_csv(file_content)
+            text = df.to_csv(index=False)
+            log_info("Extracted text from CSV file.")
+        except Exception as e:
+            log_error(f"Could not extract text from CSV: {e}")
+            text = f"[Could not extract text from CSV: {e}]"
+    elif file_type == "txt":
+        try:
+            text = file_content.read().decode("utf-8")
+            log_info("Extracted text from TXT file.")
+        except Exception as e:
+            log_error(f"Could not extract text from TXT: {e}")
+            text = f"[Could not extract text from TXT: {e}]"
+    else:
+        log_warning(f"Unsupported file type for extraction: {file_type}")
+        text = "[Unsupported file type for text extraction]"
+    return text.strip()
+
+
+
+
 # Import Firestore uploader and extend it with needed functionality
 try:
     import sys
@@ -208,7 +267,38 @@ async def _run_improvement_logic(document_id: str, report_date: str = None, anno
         upload_type = manual_upload.get("type", "unknown")
         file_type = manual_upload.get("fileType", "unknown")
         manual_upload_section += f"Type: {upload_type}\nFile Type: {file_type}\n"
+
+        if manual_upload.get("text"):
+            manual_upload_section += f"Manual Text Provided:\n{manual_upload['text']}\n"
+            log_info("Included manual text from manualUpload.")
+
+        upload_results = manual_upload.get("uploadResults") or []
+        for item in upload_results:
+            if item.get("type") == "file":
+                url = item.get("url")
+                original_name = item.get("originalName", "Unknown filename")
+                mime_type = item.get("mimeType", "")
+                file_type_guess = (mime_type.split("/")[-1] if mime_type else manual_upload.get("fileType", "pdf")).lower()
+                manual_upload_section += f"\n--- Uploaded File: {original_name} ---\n"
+                manual_upload_section += f"URL: {url}\n"
+                log_info(f"Attempting to extract text from uploaded file: {original_name} ({file_type_guess})")
+                try:
+                    extracted_text = extract_text_from_url(url, file_type_guess)
+                    snippet = extracted_text[:20000]
+                    manual_upload_section += f"Extracted Text (truncated):\n{snippet}\n"
+                    if len(extracted_text) > 20000:
+                        manual_upload_section += "[...text truncated...]\n"
+                    log_success(f"Successfully extracted text from file: {original_name}")
+                except Exception as e:
+                    manual_upload_section += f"[Could not extract text: {e}]\n"
+                    log_error(f"Failed to extract text from {original_name}: {e}")
+            elif item.get("type") == "text":
+                content = item.get("content", "")
+                manual_upload_section += f"\n--- Uploaded Text ---\n{content}\n"
+                log_info("Included uploaded text item from uploadResults.")
+
         portfolio_feedback_section += f"\n{manual_upload_section}\n"
+        log_info("Added manual upload section to portfolio feedback.")
     
     # Add chat history if available
     if chat_history and len(chat_history) > 0:

@@ -297,7 +297,7 @@ async def generate_and_upload_alternative_report(
     current_report_content_md: str,
     current_report_firestore_id: str,
     # Removed openai_client, assuming gemini_model_name implies ChatGoogleGenerativeAI
-    gemini_model_name: str = "gemini-1.5-pro-latest", # Or "gemini-1.0-pro", "gemini-1.5-flash" etc.
+    gemini_model_name: str = "gemini-2.5-pro-preview-05-06", # Or "gemini-1.0-pro", "gemini-1.5-flash" etc.
     google_api_key: Optional[str] = None, # For ChatGoogleGenerativeAI
     investment_principles_str: Optional[str] = None,
     llm_news_corpus_str: Optional[str] = None,

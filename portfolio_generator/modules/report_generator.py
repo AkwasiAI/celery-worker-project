@@ -479,7 +479,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                     # If timestamp is datetime, use as is
                     if isinstance(ts, datetime):
                         now = datetime.now(timezone.utc)
-                        if now - ts < timedelta(hours=10):
+                        if now - ts < timedelta(hours=24):
                             george_feedback = data.get("scratchpad")
 
             log_success("successfully pulled George's Feedback!!")
@@ -1066,7 +1066,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         docs = db.collection("feedback-scratchpad").where("is_latest", "==", True).limit(1).stream()
         doc = next(docs, None)
 
-        george_feedback = None
+        george_feedback = ""
         if doc:
             data = doc.to_dict()
             ts = data.get("timestamp")
@@ -1080,7 +1080,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                 # If timestamp is datetime, use as is
                 if isinstance(ts, datetime):
                     now = datetime.now(timezone.utc)
-                    if now - ts < timedelta(hours=10000):
+                    if now - ts < timedelta(hours=24):
                         george_feedback = data.get("scratchpad")
 
                         from portfolio_generator.modules.feedback_summarizer import FeedbackSummarizer

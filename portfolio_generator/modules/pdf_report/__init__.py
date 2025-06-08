@@ -6,8 +6,8 @@ This module provides functionality to:
 2. Upload generated PDFs to Google Cloud Storage
 """
 
-from .pdf_generator import PDFReportGenerator
+# from .pdf_generator import PDFReportGenerator
 from .gcs_uploader import GCSUploader
 from .report_pdf_service import ReportPDFService
 
-__all__ = ['PDFReportGenerator', 'GCSUploader', 'ReportPDFService']
+__all__ = ['GCSUploader', 'ReportPDFService']

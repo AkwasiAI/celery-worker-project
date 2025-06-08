@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
+from google.cloud import firestore
 from google.cloud import storage
+# from portfolio_generator.modules.report_generator import storage
 import logging
 
 logger = logging.getLogger(__name__)
@@ -66,3 +68,4 @@ class GCSUploader:
         except Exception as e:
             logger.error(f"Failed to upload file to GCS: {e}")
             raise
+        

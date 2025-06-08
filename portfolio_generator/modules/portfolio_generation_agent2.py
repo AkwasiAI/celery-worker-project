@@ -86,7 +86,7 @@ Based on the provided Orasis Base Principles, Executive Summary Detailed Instruc
 **Specific Instructions for this Draft:**
 1.  Construct a portfolio of 10-15 assets from the PREFERRED_TICKERS list found in the 'Executive Summary Detailed Instructions'.
 2.  Your proposal MUST reflect understanding and consideration of insights from "George Elliott's Latest Feedback". If specific news, sectors, or sentiments are highlighted there, ensure your themes and asset choices align or address them.
-3.  Aim to retain roughly 60% of the assets/themes from the 'Previous Portfolio' if their rationale still holds given the 'LLM News Corpus' AND "George Elliott's Latest Feedback". Introduce approximately 40% new or significantly re-weighted positions.
+3.  Aim to retain minimum of 60% of the assets/themes/instruments from the 'Previous Portfolio' if their rationale still holds given the 'LLM News Corpus' AND "George Elliott's Latest Feedback". Introduce approximately 40% new or significantly re-weighted positions unless otherwise stated by George.
 4.  Ensure all allocation percentages sum to 100.0%.
 5.  Adhere to George's specified time horizon distribution.
 6.  Provide clear, forward-looking rationales in the narrative, integrating insights from all provided contexts.
@@ -213,7 +213,7 @@ def portfolio_proposer_node(state: PortfolioGenerationState) -> Dict[str, Any]:
     if current_run_iteration_number > 1 and state.get("cio_decision_text") and \
        "INSTRUCTIONS_FOR_REVISION:" in state["cio_decision_text"]:
         cio_instructions = "\n**CIO Revision Instructions:**\n" + state["cio_decision_text"].split("INSTRUCTIONS_FOR_REVISION:", 1)[1].strip()
-        log.info(f"Proposer received CIO instructions:\n{cio_instructions}")
+        log.info(f"Proposer received CIO instructions:\n{cio_instructions[:200]}")
 
     georges_feedback = state.get("georges_feedback_text", "No specific feedback from George provided for this cycle.")
     if not georges_feedback.strip(): # Ensure it's not just whitespace
@@ -281,7 +281,7 @@ def portfolio_critic_node(state: PortfolioGenerationState) -> Dict[str, Any]:
         try:
             response = LLM_CLIENT.invoke(messages)
             critique = response.content.strip()
-            log.info(f"Critic feedback received:\n{critique}")
+            log.info(f"Critic feedback received:\n{critique[:300]}")
         except Exception as e:
             log.error(f"Critic Gemini LLM call failed: {e}", exc_info=True)
             critique = "Error: LLM call failed in Critic."
@@ -305,7 +305,7 @@ def cio_judge_node(state: PortfolioGenerationState) -> Dict[str, Any]:
         proposer_draft_markdown=state.get("proposer_draft_markdown", "N/A"),
         critic_feedback=state.get("critic_feedback", "N/A"),
         georges_feedback_text=georges_feedback, # ADDED GF
-        llm_corpus_content=state["llm_corpus_content"][:15000],
+        llm_corpus_content=state["llm_corpus_content"][:1000000], #Let's do one million characters for cutoff
         previous_portfolio_json_str=json.dumps(state["previous_portfolio_data"], indent=2),
         base_system_prompt_content=state["base_system_prompt_fully_formatted"],
         executive_summary_detailed_prompt_content=state["exec_summary_detailed_prompt_fully_formatted"]

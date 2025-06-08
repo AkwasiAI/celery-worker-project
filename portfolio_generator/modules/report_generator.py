@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from openai import OpenAI
 
 from portfolio_generator.prompts_config import (EXECUTIVE_SUMMARY_DETAILED_PROMPT,
@@ -82,6 +82,7 @@ def sanitize_report_content_with_gemini(report_content: str) -> str:
 
 
 async def generate_investment_portfolio(test_mode=False, dry_run=False, priority_period="month"):
+
     """Generate a comprehensive investment portfolio report through multiple API calls.
     
     Args:
@@ -259,17 +260,19 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         #     categories.append((cat, start, end))
         #     search_queries.extend(queries)
         #     start = end
-        try:
-            evaluate_yesterday()
-            log_success("Successfully evaluated yesterday's update")
-        except Exception as e:
-            log_error(f"Exception running the 100 ticker evals: {e}")
 
-        try:
-            predict_tomorrow()
-            log_success("Successfully Forecasted tomorrow's update")
-        except Exception as e:
-            log_error(f"Exception running the 100 ticker evals: {e}")
+
+        # try:
+        #     evaluate_yesterday()
+        #     log_success("Successfully evaluated yesterday's update")
+        # except Exception as e:
+        #     log_error(f"Exception running the 100 ticker evals: {e}")
+
+        # try:
+        #     predict_tomorrow()
+        #     log_success("Successfully Forecasted tomorrow's update")
+        # except Exception as e:
+        #     log_error(f"Exception running the 100 ticker evals: {e}")
         
         try:
             # Execute searches using identical approach as original
@@ -459,9 +462,25 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
 
         try:
             db = firestore.Client(project="hedgefundintelligence", database="hedgefundintelligence")
-            docs = db.collection("alternative-portfolio-scratchpad").where("is_latest", "==", True).limit(1).stream()
-            george_feedback = next(docs, None)
-            george_feedback = george_feedback.to_dict()["scratchpad"] if george_feedback else None
+            docs = db.collection("feedback-scratchpad").where("is_latest", "==", True).limit(1).stream()
+            doc = next(docs, None)
+
+            george_feedback = ""
+            if doc:
+                data = doc.to_dict()
+                ts = data.get("timestamp")
+                if ts:
+                    # If timestamp is string, parse as ISO8601
+                    if isinstance(ts, str):
+                        try:
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        except Exception:
+                            ts = None  # Fallback if parsing fails
+                    # If timestamp is datetime, use as is
+                    if isinstance(ts, datetime):
+                        now = datetime.now(timezone.utc)
+                        if now - ts < timedelta(hours=10):
+                            george_feedback = data.get("scratchpad")
 
             log_success("successfully pulled George's Feedback!!")
         except Exception as e:
@@ -1041,6 +1060,43 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         log_error(f"Error uploading the news scratchpad to Firebase: {e}")
 
 
+    # adding feedback to the report
+    try:
+        db = firestore.Client(project="hedgefundintelligence", database="hedgefundintelligence")
+        docs = db.collection("feedback-scratchpad").where("is_latest", "==", True).limit(1).stream()
+        doc = next(docs, None)
+
+        george_feedback = None
+        if doc:
+            data = doc.to_dict()
+            ts = data.get("timestamp")
+            if ts:
+                # If timestamp is string, parse as ISO8601
+                if isinstance(ts, str):
+                    try:
+                        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    except Exception:
+                        ts = None  # Fallback if parsing fails
+                # If timestamp is datetime, use as is
+                if isinstance(ts, datetime):
+                    now = datetime.now(timezone.utc)
+                    if now - ts < timedelta(hours=10000):
+                        george_feedback = data.get("scratchpad")
+
+                        from portfolio_generator.modules.feedback_summarizer import FeedbackSummarizer
+                        summarizer = FeedbackSummarizer()
+                        result = summarizer.process_feedback_text(george_feedback)
+
+                        report_content = result + report_content
+                    else:
+                        log_warning("George had no feedback in the last 24 hours")
+                        result = None
+    except Exception as e:
+        log_error(f"Failed to save portfolio weights to file: {e}")
+
+
+
+
     # sanitize report content via Gemini
     report_content = sanitize_report_content_with_gemini(report_content)
     
@@ -1080,6 +1136,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
 
                     try:
+                        firestore_downloader = FirestoreDownloader()
                         old_alternative_portfolio_weights = firestore_downloader.get_latest("portfolio-weights-alternative")
                         log_success(f"Successfully Pulled Old Alternative portfolio weights")
                     except:
@@ -1168,12 +1225,13 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         log_warning(f"Failed to upload Risk & Benchmark report: {e_rb}")
 
     # Generate and upload PDF version of the report
+
     try:
         # Import the PDF service
-        from portfolio_generator.modules.pdf_report import ReportPDFService
+        from portfolio_generator.modules.pdf_report.report_pdf_service import ReportPDFService
 
         # Only run PDF generation if we have report sections
-        if report_sections:
+        if report_content:
             pdf_service = ReportPDFService(bucket_name="reportpdfhedgefundintelligence")
             
             log_info("Generating PDF report...")
@@ -1193,7 +1251,34 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                 
     except Exception as e:
         log_error(f"PDF generation failed: {e}")
+        
         # Continue execution - PDF generation failure shouldn't stop the report
+
+    try:
+        # Import the PDF service
+        from portfolio_generator.modules.pdf_report.report_pdf_service import ReportPDFService
+
+        # Only run PDF generation if we have report sections
+        if report_content:
+            pdf_service = ReportPDFService(bucket_name="altreportpdfhedgefundintelligence")
+            
+            log_info("Generating PDF report...")
+            
+            pdf_result = pdf_service.generate_and_upload_pdf(
+                report_sections=new_alt_report,
+                report_date=current_date,
+                upload_to_gcs=not dry_run and not test_mode,
+                keep_local_copy=test_mode
+            )
+            
+            if pdf_result.get('gcs_path'):
+                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
+            
+            if pdf_result.get('local_path'):
+                log_info(f"PDF saved locally: {pdf_result['local_path']}")
+                
+    except Exception as e:
+        log_error(f"PDF generation failed: {e}")
 
     try:
 

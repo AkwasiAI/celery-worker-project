@@ -139,6 +139,28 @@ Format in markdown starting with:
 ## Benchmarking & Performance
 '''
 
+        # --- Issues/Comment-out section below ---
+        # Shipping Equities,CMBTB.XD,CMB Tech NV      # EURN EU is in no way affiliated with CMB Tech NV
+        # Commodities Equities,ABX.TO,Barrick Gold Corp   # GOLD:US has changed to a new ticker symbol: ABX:CN in Bloomberg
+        # Indices,CCMP Index,NASDAQ Composite Index      # Can't find Yahoo ticker
+        # Indices,DAX Index,Deutsche Boerse AG German Stock # Can't find Yahoo ticker
+        # Indices,IBEX Index,IBEX 35 Index               # ^IBEX
+        # Indices,WORLD Index,Bloomberg World Large & Mid Cap # Can't find Yahoo ticker
+        # Commodities,CLA Comdty,WTI CRUDE FUTURE  Apr25      # Can't find Yahoo ticker
+        # Commodities,COA Comdty,BRENT CRUDE FUTR  May25      # Can't find Yahoo ticker
+        # Commodities,QSA Comdty,Low Su Gasoil G   Mar25      # Can't find Yahoo ticker
+        # Commodities,XBA Comdty,GASOLINE RBOB FUT Apr25      # Can't find Yahoo ticker
+        # Commodities,HOA Comdty,NY Harb ULSD Fut  Apr25      # Can't find Yahoo ticker
+        # Commodities,LMAHDS03 Comdty,LME ALUMINUM  3MO ($)   # Can't find Yahoo ticker
+        # Commodities,NGA Comdty,NATURAL GAS FUTR  Apr25      # Can't find Yahoo ticker
+        # Commodities,TZTA Comdty,TTF NAT GAS F     Apr25     # Can't find Yahoo ticker
+        # Commodities,LMCADS03 Comdty,LME COPPER    3MO ($)   # Can't find Yahoo ticker
+        # Commodities,LMNIDS03 Comdty,LME NICKEL    3MO ($)   # Can't find Yahoo ticker
+        # Commodities,IOEA Comdty,DCE Iron Ore Fut  May25     # Can't find Yahoo ticker
+        # Commodities,RBTA Comdty,Deformed Bar Fut  May25     # Can't find Yahoo ticker
+        # Shipping Equities,BELCO NO,Belships ASA             # No Yahoo ticker found
+        
+
 EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Investment Portfolio Executive Summary**
 
 **Objective:** Create a concise, data-driven executive summary for a hypothetical investment portfolio report, suitable for stakeholders. This summary should focus on the portfolio's **strategic positioning and expected performance drivers** based on the anticipated market environment. Assume this summary is being generated based on a recent portfolio review and strategy setting.
@@ -169,107 +191,90 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
     *   **Ticker Source List (PREFERRED_TICKERS):**
         ```csv
         Category,Ticker,Name
-        US-Listed Shipping Companies,HAFNI.OL,Hafnia Limited (Oslo Listing)
-        US-Listed Shipping Companies,STNG,Scorpio Tankers Inc.
-        US-Listed Shipping Companies,TRMD,TORM plc (ADR)
-        US-Listed Shipping Companies,FRO,Frontline plc
-        US-Listed Commodity Companies,ECO,"Okeanis Eco Tankers Corp"
-        US-Listed Shipping Companies,DHT,DHT Holdings, Inc.
-        Non-US-Listed Shipping Companies,EURN.BR,Euronav NV
-        US-Listed Shipping Companies,INSW,International Seaways, Inc.
-        US-Listed Shipping Companies,NAT,Nordic American Tankers Limited
-        US-Listed Shipping Companies,TEN,Tsakos Energy Navigation Limited
-        US-Listed Shipping Companies,IMPP,Imperial Petroleum Inc.
-        US-Listed Shipping Companies,PSHG,Performance Shipping Inc.
-        US-Listed Shipping Companies,TORO,Toro Corp.
-        US-Listed Shipping Companies,TNK,Teekay Tankers Ltd.
-        US-Listed Shipping Companies,PXS,"Pyxis Tankers Inc."
-        US-Listed Shipping Companies,TOPS,TOP Ships Inc.
-        US-Listed Shipping Companies,DSX,Diana Shipping Inc.
-        US-Listed Shipping Companies,GNK,Genco Shipping & Trading Limited
-        US-Listed Shipping Companies,GOGL,Golden Ocean Group Limited
-        US-Listed Shipping Companies,NMM,Navios Maritime Partners L.P.
-        US-Listed Shipping Companies,SB,Safe Bulkers, Inc.
-        US-Listed Shipping Companies,SBLK,Star Bulk Carriers Corp.
-        US-Listed Shipping Companies,SHIP,Seanergy Maritime Holdings Corp.
-        Non-US-Listed Shipping Companies,HSHP.OL,Himalaya Shipping Ltd.
-        US-Listed Shipping Companies,EDRY,EuroDry Ltd.
-        US-Listed Shipping Companies,CTRM,Castor Maritime Inc.
-        US-Listed Shipping Companies,ICON,Icon Energy Corp
-        US-Listed Shipping Companies,GLBS,Globus Maritime Limited
-        US-Listed Shipping Companies,CMRE,Costamare Inc.
-        US-Listed Shipping Companies,DAC,Danaos Corporation
-        US-Listed Shipping Companies,GSL,Global Ship Lease, Inc.
-        US-Listed Shipping Companies,ESEA,Euroseas Ltd.
-        Non-US-Listed Shipping Companies,MPCC.OL,MPC Container Ships ASA
-        US-Listed Shipping Companies,ZIM,ZIM Integrated Shipping Services Ltd.
-        US-Listed Shipping Companies,SFL,SFL Corporation Ltd.
-        Non-US-Listed Shipping Companies,MAERSK-B.CO,A.P. Møller - Mærsk A/S B
-        Non-US-Listed Shipping Companies,BWLPG.OL,BW LPG Limited
-        US-Listed Shipping Companies,LPG,Dorian LPG Ltd.
-        US-Listed Commodity Companies,CCEC,Capital Clean Energy Carriers Corp
-        US-Listed Shipping Companies,GASS,StealthGas Inc.
-        US-Listed Shipping Companies,DLNG,Dynagas LNG Partners LP
-        Non-US-Listed Shipping Companies,AGAS.OL,Avance Gas Holding Ltd.
-        Non-US-Listed Shipping Companies,ALNG.OL,Awilco LNG ASA
-        US-Listed Shipping Companies,FLNG,FLEX LNG Ltd.
-        US-Listed Offshore Energy Companies,RIG,Transocean Ltd.
-        US-Listed Offshore Energy Companies,HLX,Helix Energy Solutions Group, Inc.
-        US-Listed Shipping Companies,1Q6.F,Prosafe SE
-        Non-US-Listed Offshore Energy Companies,SBMO.AS,SBM Offshore N.V.
-        US-Listed Offshore Energy Companies,TDW,Tidewater Inc.
-        US-Listed Commodity Companies,RIO,Rio Tinto Group plc (ADR)
-        US-Listed Commodity Companies,BHP,BHP Group Limited (ADR)
-        US-Listed Commodity Companies,VALE,Vale S.A. (ADR)
-        US-Listed Commodity Companies,GLNCY,Glencore plc (ADR)
-        US-Listed Commodity Companies,ADM,Archer-Daniels-Midland Company
-        US-Listed Commodity Companies,WLMIY,"Wilh. Wilhelmsen Holding ASA (ADR)"
-        US-Listed Commodity Companies,BG,Bunge Global SA
-        US-Listed Commodity Companies,SHEL,Shell plc (ADR)
-        US-Listed Commodity Companies,XOM,Exxon Mobil Corporation
-        US-Listed Commodity Companies,CVX,Chevron Corporation
-        US-Listed Commodity Companies,TTE,TotalEnergies SE (ADR)
-        US-Listed Commodity Companies,WPM,Wheaton Precious Metals Corp.
-        US-Listed Commodity Companies,GOLD,Barrick Gold Corporation
-        US-Listed Commodity Companies,CLF,Cleveland-Cliffs Inc.
-        US-Listed Commodity Companies,ALB,Albemarle Corporation
-        US-Listed Commodity Companies,MOS,The Mosaic Company
-        Shipping & Tanker ETFs,BDRY,Breakwave Dry Bulk Shipping ETF
-        Shipping & Tanker ETFs,BWET,Breakwave Tanker Shipping ETF
-        Indices,CCMP,NASDAQ Composite Index (FMP Standard: ^IXIC)
-        Indices,CAC,CAC 40 Index (FMP Standard: ^FCHI)
-        Indices,DAX,DAX Index (FMP Standard: ^GDAXI)
-        Indices,IBEX,IBEX 35 Index (FMP Standard: ^IBEX)
-        Indices,SMI,Swiss Market Index (FMP Standard: ^SSMI)
-        Non-US-Listed Shipping Companies,2020.OL,2020 Bulkers Ltd.
-        Non-US-Listed Shipping Companies,JIN.OL,Jinhui Shipping and Transportation Limited
-        Non-US-Listed Shipping Companies,BELCO.OL,Belships ASA
-        Non-US-Listed Shipping Companies,COOL.OL,Cool Company Ltd.
-        Non-US-Listed Offshore Energy Companies,SPM.MI,Saipem S.p.A.
+        Shipping Equities,HAFNI.OL,Hafnia Ltd
+        Shipping Equities,STNG,Scorpio Tankers Inc
+        Shipping Equities,TRMD,TORM PLC
+        Shipping Equities,FRO,Frontline PLC
+        Shipping Equities,ECO,Okeanis Eco Tankers Corp
+        Shipping Equities,DHT,DHT Holdings Inc
+        Shipping Equities,INSW,International Seaways Inc
+        Shipping Equities,NAT,Nordic American Tankers Ltd
+        Shipping Equities,TEN,Tsakos Energy Navigation Ltd
+        Shipping Equities,IMPP,Imperial Petroleum Inc
+        Shipping Equities,PSHG,Performance Shipping Inc
+        Shipping Equities,TORO,Toro Corp
+        Shipping Equities,TNK,Teekay Tankers Ltd
+        Shipping Equities,PXS,Pyxis Tankers Inc
+        Shipping Equities,TOPS,TOP Ships Inc
+        Shipping Equities,DSX,Diana Shipping Inc
+        Shipping Equities,GNK,Genco Shipping & Trading Ltd
+        Shipping Equities,GOGL,Golden Ocean Group Ltd
+        Shipping Equities,NMM,Navios Maritime Partners LP
+        Shipping Equities,SB,Safe Bulkers Inc
+        Shipping Equities,SBLK,Star Bulk Carriers Corp
+        Shipping Equities,SHIP,Seanergy Maritime Holdings Cor
+        Shipping Equities,2020.OL,2020 Bulkers Ltd
+        Shipping Equities,HSHP,Himalaya Shipping Ltd
+        Shipping Equities,EDRY,EuroDry Ltd
+        Shipping Equities,JINO.XD,Jinhui Shipping & Transportation
+        Shipping Equities,CTRM,Castor Maritime Inc
+        Shipping Equities,ICON,Icon Energy Corp
+        Shipping Equities,GLBS,Globus Maritime Ltd
+        Shipping Equities,CMRE,Costamare Inc
+        Shipping Equities,DAC,Danaos Corp
+        Shipping Equities,GSL,Global Ship Lease Inc
+        Shipping Equities,ESEA,Euroseas Ltd
+        Shipping Equities,MPCC.OL,MPC Container Ships ASA
+        Shipping Equities,ZIM,ZIM Integrated Shipping Services
+        Shipping Equities,SFL,SFL Corp Ltd
+        Shipping Equities,BWLPGO.XD,BW LPG Ltd
+        Shipping Equities,LPG,Dorian LPG Ltd
+        Shipping Equities,CCEC,Capital Clean Energy Carriers
+        Shipping Equities,GASS,StealthGas Inc
+        Shipping Equities,DLNG,Dynagas LNG Partners LP
+        Shipping Equities,AGASO.OL,Avance Gas Holding Ltd
+        Shipping Equities,ALNGO.OL,Awilco LNG AS
+        Shipping Equities,CLCO,Cool Co Ltd
+        Shipping Equities,FLNG,FLEX LNG Ltd
+        Energy Services,RIG,Transocean Ltd
+        Energy Services,HLX,Helix Energy Solutions Group Inc
+        Energy Services,PRS.OL,Prosafe SE
+        Energy Services,SPM.MI,Saipem SpA
+        Energy Services,SBMO.VI,SBM Offshore NV
+        Energy Services,TDW,Tidewater Inc
+        Commodities Equities,RIO,Rio Tinto PLC
+        Commodities Equities,BHP,BHP Group Ltd
+        Commodities Equities,VALE,Vale SA
+        Commodities Equities,GLNCY,Glencore PLC
+        Commodities Equities,ADM,Archer-Daniels-Midland Co
+        Commodities Equities,WLMIY,Wilmar International Ltd
+        Commodities Equities,BG,Bunge Global SA
+        Commodities Equities,SHEL,Shell PLC
+        Commodities Equities,XOM,Exxon Mobil Corp
+        Commodities Equities,CVX,Chevron Corp
+        Commodities Equities,TTE,TotalEnergies SE
+        Commodities Equities,WPM,Wheaton Precious Metals Corp
+        Commodities Equities,VALE,Vale SA
+        Commodities Equities,CLF,Cleveland-Cliffs Inc
+        Commodities Equities,ALB,Albemarle Corp
+        Commodities Equities,MOS,Mosaic Co/The
+        Shipping ETFs,BDRY,Breakwave Dry Bulk Shipping ETF
+        Shipping ETFs,BWET,Breakwave Tanker Shipping ETF
         Indices,^DJI,Dow Jones Industrial Average
-        Indices,^GSPC,S&P 500 Index
+        Indices,^SPX,S&P 500 Index
         Indices,^GSPTSE,S&P/TSX Composite Index
-        Indices,^MXX,IPC Mexico Index
-        Indices,^BVSP,Bovespa Index (Brazil)
-        Indices,^STOXX50E,EURO STOXX 50 Index
-        Indices,^FTSE,FTSE 100 Index
-        Indices,^N225,Nikkei 225 Index
+        Indices,^MXX,S&P/BMV IPC
+        Indices,^BVSP,Ibovespa Brasil Sao Paulo Stock
+        Indices,^STOXX50E,EURO STOXX 50 Price EUR
+        Indices,UKXDUK.L,FTSE 100 Index
+        Indices,^FCHI,CAC 40
+        Indices,FTSEMIB.MI,FTSE MIB Index
+        Indices,^OMX,OMX Stockholm 30 Index
+        Indices,SMIN.SW,Swiss Market Index
+        Indices,^N225,Nikkei 225
         Indices,^HSI,Hang Seng Index
-        Indices,^AXJO,S&P/ASX 200 Index
-        Indices,^FTMIB,FTSE MIB Index (Italy)
-        Indices,000300.SS,CSI 300 Index (Shanghai)
-        Commodities,RBTA,Rotterdam Coal Futures (Generic Code)
-        Commodities,CLA,Coal API 2 CIF ARA (Generic Code)
-        Commodities,COA,Coal API 4 FOB Richards Bay (Generic Code)
-        Commodities,QSA,Iron Ore Fe 62% CFR China (Generic Code)
-        Commodities,XBA,Alumina FOB Australia (Generic Code)
-        Commodities,HOA,Heating Oil Futures (Generic Code)
-        Commodities,NGA,Natural Gas Futures (Generic Code)
-        Commodities,TZTA,Carbon Emissions Allowances (Generic Code)
-        Commodities,LMAHDS03,LME Aluminium High Grade Cash (Generic Code)
-        Commodities,LMCADS03,LME Copper Grade A Cash (Generic Code)
-        Commodities,LMNIDS03,LME Nickel Primary Cash (Generic Code)
-        Commodities,IOEA,Iron Ore Fines 62% Fe, CFR China TSI (Generic Code)
+        Indices,000300.SS,Shanghai Shenzhen CSI 300 Index
+        Indices,^AXJO,S&P/ASX 200
         ```
 
 4.  **CRITICAL REQUIREMENT: Hidden JSON Output:**

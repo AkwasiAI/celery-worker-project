@@ -21,10 +21,15 @@ WORKDIR /app
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
     for i in 1 2 3; do \
       apt-get update --allow-releaseinfo-change -o Acquire::http::No-Cache=True && \
-      apt-get install -y --no-install-recommends curl libgl1 libglib2.0-0 python3-opencv --fix-missing && \
+      apt-get install -y --no-install-recommends \
+        curl libgl1 libglib2.0-0 python3-opencv \
+        libffi-dev libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
+        libxml2 libxslt1.1 libjpeg-dev zlib1g-dev fonts-dejavu-core \
+        --fix-missing && \
       dpkg --configure -a && \
       apt-get clean && rm -rf /var/lib/apt/lists/* && break || sleep 5; \
     done
+
 
 # Create logs directory as root
 RUN mkdir -p /app/logs

@@ -121,7 +121,7 @@ def format_search_results(search_results):
 
 from portfolio_generator.gcs_video_context_generator import generate_context_from_latest_video
 
-async def _run_improvement_logic(document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None):
+async def _run_improvement_logic(document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None, portfolio_preferences: dict = None):
     # Step 0a: Generate video context from GCS or use provided video URL
     try:
         # Store the video URL in the context even if we don't process it yet
@@ -170,6 +170,38 @@ async def _run_improvement_logic(document_id: str, report_date: str = None, anno
             old_w = wc.get("oldWeight") or wc.get("old_weight", "")
             new_w = wc.get("newWeight") or wc.get("new_weight", "")
             portfolio_feedback_section += f"{i}. {asset} ({ticker}): {old_w} -> {new_w}\n"
+    # Add portfolio preferences if available
+    if portfolio_preferences:
+        portfolio_feedback_section += "\n--- Portfolio Preferences ---\n"
+        # Position limits
+        pos_limits = portfolio_preferences.get("positionLimits")
+        if pos_limits:
+            min_pos = pos_limits.get("min")
+            max_pos = pos_limits.get("max")
+            if min_pos is not None and max_pos is not None:
+                portfolio_feedback_section += (
+                    f"- Position limits: Prefer between {min_pos} and {max_pos} positions in the portfolio.\n"
+                )
+        # Long/short ratio
+        long_short = portfolio_preferences.get("longShortRatio")
+        if long_short:
+            long_pct = long_short.get("long")
+            short_pct = long_short.get("short")
+            if long_pct is not None and short_pct is not None:
+                portfolio_feedback_section += (
+                    f"- Long/Short ratio: Prefer {long_pct}% long positions and {short_pct}% short positions.\n"
+                )
+        # Horizon distribution
+        horizon_dist = portfolio_preferences.get("horizonDistribution")
+        if horizon_dist:
+            parts = []
+            for term, pct in horizon_dist.items():
+                # "shortTerm" → "short-term", "mediumTerm" → "medium-term", etc.
+                formatted_term = term.replace("Term", "-term")
+                parts.append(f"{pct}% {formatted_term}")
+            portfolio_feedback_section += (
+                "- Investment horizon: Prefer distribution of " + ", ".join(parts) + ".\n"
+            )
     # Add manual upload info if available
     if manual_upload:
         manual_upload_section = "=====ManualUpload=====\n"
@@ -191,7 +223,7 @@ async def _run_improvement_logic(document_id: str, report_date: str = None, anno
     scratchpad_text = f"{video_feedback_section}\n\n{portfolio_feedback_section}"
     try:
         uploader = EnhancedFirestoreUploader()
-        col = uploader.db.collection("alternative-portfolio-scratchpad")
+        col = uploader.db.collection("feedback-scratchpad")
         # Mark previous scratchpad docs as not latest
         for doc in col.where("is_latest", "==", True).stream():
             col.document(doc.id).update({"is_latest": False})

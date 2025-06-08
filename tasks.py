@@ -35,7 +35,7 @@ def say_hello(self, name: str):
 
 
 @celery_app.task(name="tasks.improve_report_with_feedback", bind=True)
-def improve_report_with_feedback(self, document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None):
+def improve_report_with_feedback(self, document_id: str, report_date: str = None, annotations: list = None, timestamp: str = None, video_url: str = None, weight_changes: list = None, position_count: int = None, manual_upload: dict = None, chat_history: list = None, portfolio_preferences: dict = None):
     """
     Celery task to improve a report using OpenAI based on annotations AND weight changes, using the provided original report content.
     Incorporates web search and saves the improved report back to Firestore.
@@ -50,6 +50,7 @@ def improve_report_with_feedback(self, document_id: str, report_date: str = None
         position_count: The required number of portfolio positions to enforce in the improved report
         manual_upload: Dictionary containing details about manually uploaded files
         chat_history: List of chat message objects containing role, content, and timestamp
+        portfolio_preferences: Dictionary of portfolio preferences such as position limits, long/short ratio, horizon distribution
     
     Returns:
         Dict containing success message, document ID, and runtime information
@@ -62,6 +63,8 @@ def improve_report_with_feedback(self, document_id: str, report_date: str = None
     annotations = annotations or []
     weight_changes = weight_changes or []
     chat_history = chat_history or []
+    portfolio_preferences = portfolio_preferences or {}
+
     
     if not REPORT_IMPROVER_AVAILABLE:
         error_msg = "Report improver module is not available. Cannot process the task."
@@ -72,7 +75,7 @@ def improve_report_with_feedback(self, document_id: str, report_date: str = None
 
     try:
         # Run the async improvement logic using asyncio
-        result = asyncio.run(_run_improvement_logic(document_id, report_date, annotations, timestamp, video_url, weight_changes, position_count, manual_upload, chat_history))
+        result = asyncio.run(_run_improvement_logic(document_id, report_date, annotations, timestamp, video_url, weight_changes, position_count, manual_upload, chat_history, portfolio_preferences))
         
         logger.info(f"Task {task_id}: Successfully improved report {document_id} in {result.get('runtime_seconds', 0)} seconds")
         print(f"Task {task_id}: Successfully improved report {document_id} in {result.get('runtime_seconds', 0)} seconds")

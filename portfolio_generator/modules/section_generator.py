@@ -205,7 +205,7 @@ async def generate_section_with_web_search(
         log_info(f"Calling Gemini 2.5 Pro for {section_name}")
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model="gemini-2.5-pro-preview-05-06",  # or your specific model tag
+            model=  "gemini-2.5-flash-preview-05-20", #"gemini-2.5-pro-preview-05-06",  # or your specific model tag
             contents=full_prompt,
             config=config
         )

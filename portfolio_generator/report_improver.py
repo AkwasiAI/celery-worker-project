@@ -169,7 +169,7 @@ async def _run_improvement_logic(document_id: str, report_date: str = None, anno
             ticker = wc.get("ticker", "")
             old_w = wc.get("oldWeight") or wc.get("old_weight", "")
             new_w = wc.get("newWeight") or wc.get("new_weight", "")
-            portfolio_feedback_section += f"{i}. {asset} ({ticker}): {old_w} -> {new_w}\n"
+            portfolio_feedback_section += f"{i}. {asset} ({ticker}): {old_w} -> {new_w} \n"
     # Add portfolio preferences if available
     if portfolio_preferences:
         portfolio_feedback_section += "\n--- Portfolio Preferences ---\n"

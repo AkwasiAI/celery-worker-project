@@ -494,33 +494,97 @@ import re
 from collections import defaultdict
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-def log_info(msg): print(msg)
-def log_error(msg): print(msg)
+import json
+import re
+from collections import defaultdict
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+def extract_portfolio_from_report(report_content):
+    """
+    Extract current portfolio asset list from a hidden markdown JSON block.
+    Looks for: <!-- PORTFOLIO_POSITIONS_JSON: ... -->
+    Returns: list of dicts or None
+    """
+    m = re.search(r'<!--\s*PORTFOLIO_POSITIONS_JSON:\s*(\[[\s\S]*?\])\s*-->', report_content)
+    if not m:
+        log_error("Could not find portfolio JSON block in report_content!")
+        return None
+    try:
+        assets = json.loads(m.group(1))
+        return assets
+    except Exception as e:
+        log_error(f"Failed to parse extracted portfolio JSON: {e}")
+        return None
+    
+import copy
+
+def clean_portfolio(data):
+    # Make a deep copy to avoid modifying the original data
+    data_clean = copy.deepcopy(data)
+    # Filter and clean the assets
+    assets = data_clean["portfolio"]["assets"]
+    new_assets = []
+    for asset in assets:
+        if not asset.get("wasRemoved", False):
+            asset_copy = asset.copy()
+            asset_copy.pop("wasRemoved", None)
+            asset_copy.pop("isNew", None)
+            new_assets.append(asset_copy)
+    # Update the assets list in the original structure
+    data_clean["portfolio"]["assets"] = new_assets
+    return data_clean
 
 async def generate_portfolio_json(
-    client, # Ignored, for compatibility
+    client,  # Ignored, for compatibility
     assets_list,
     current_date,
     report_content,
     investment_principles="",
-    old_portfolio_weights = None,
+    old_portfolio_weights=None,
     search_client=None,
-    search_results=None    ):
+    search_results=None
+):
     """
-    Generate a structured portfolio JSON following the gold standard format using LangChain Gemini.
+    Extracts current portfolio from hidden markdown block and generates gold-standard JSON.
     """
 
     try:
-        log_info("Generating portfolio JSON using Gemini (LangChain) from report content")
+        log_info("Extracting portfolio from report content")
+        current_portfolio_assets = extract_portfolio_from_report(report_content)
+        if not current_portfolio_assets:
+            return json.dumps({"status": "error", "message": "No current portfolio found in report content."}, indent=2)
 
-        # ---- Parse old portfolio for tickers ----
-        old_tickers = set()
+        # Normalize keys for current assets
+        def norm(a):
+            # Try to harmonize fields for downstream code and LLM prompt
+            mapping = {
+                'asset': 'ticker', 'position_type': 'position',
+                'allocation_percent': 'weight', 'time_horizon': 'horizon'
+            }
+            d = {}
+            for k, v in a.items():
+                newk = mapping.get(k, k)
+                d[newk] = v
+            # Convert weights from percent to decimal if needed
+            if isinstance(d.get('weight', None), (int, float)) and d['weight'] > 1.5:
+                d['weight'] = round(float(d['weight']) / 100, 4)
+            # Standardize position
+            if 'position' in d:
+                d['position'] = d['position'].upper()
+            return d
+        current_assets = [norm(a) for a in current_portfolio_assets]
+
+        # ---- Parse old portfolio for tickers (ignore 'wasRemoved': True assets) ----
         old_assets = []
+        old_tickers = set()
         if old_portfolio_weights and isinstance(old_portfolio_weights, dict):
-            old_assets = old_portfolio_weights.get("portfolio", {}).get("assets", [])
+            all_old_assets = old_portfolio_weights.get("portfolio", {}).get("assets", [])
+            old_assets = [a for a in all_old_assets if not a.get("wasRemoved", False)]
             old_tickers = set(a.get("ticker", "").upper() for a in old_assets if "ticker" in a)
         num_old = len(old_tickers)
 
+        old_portfolio_weights = clean_portfolio(old_portfolio_weights)
+        
         # ---- PROMPT ----
         gold_standard = """{
   "portfolio": {
@@ -536,8 +600,6 @@ async def generate_portfolio_json(
         "rationale": "Apple's services growth and ecosystem lock-in provide resilient cash flows during market volatility, aligning with our principle of prioritizing companies with strong moats and recurring revenue streams.",
         "region": "North America",
         "sector": "Technology",
-        "isNew": true,
-        "wasRemoved": false
       }
     ],
     "portfolio_stats": {
@@ -562,21 +624,21 @@ async def generate_portfolio_json(
   }
 }"""
 
+        # Compose a portfolio section for the prompt from extracted assets
+        portfolio_section = json.dumps(current_assets, indent=2)
+
         system_prompt = (
-            "You are an expert financial analyst tasked with extracting and structuring portfolio data from investment reports.\n"
-            f"{investment_principles if investment_principles else ''}\n"
+            "You are an expert financial analyst tasked with extracting and structuring portfolio data.\n"
             "Always output a structured JSON with the following fields for each asset:\n"
             "- ticker\n"
             "- name\n"
-            "- position (LONG or SHORT) - It is already provided in the report\n"
-            "- weight (decimal, sum of weights should be ~1.0) - It is already provided in the report\n"
+            "- position (LONG or SHORT)\n"
+            "- weight (decimal, sum of weights should be ~1.0)\n"
             "- target_price (numerical, or null if not specified)\n"
-            "- horizon (one of:\"1-3M\", \"3-6M\", \"6-12M\", \"12-18M\", \"18M+\") - It is already provided in the report\n"
+            "- horizon (one of: \"6-12M\", \"3-6M\", \"12-18M\", \"18M+\")\n"
             "- rationale (clear, principle-based)\n"
             "- region (one of: North America, Europe, Asia, Latin America, Africa, Oceania, Global)\n"
             "- sector\n"
-            "- isNew (true if not in prior portfolio)\n"
-            "- wasRemoved (true if removed from prior portfolio)\n"
             "Also, generate portfolio_stats with:\n"
             "- total_assets\n"
             "- avg_position_size\n"
@@ -587,36 +649,24 @@ async def generate_portfolio_json(
             "Follow the JSON format shown in the gold standard below.\n"
         )
 
-        user_prompt = f"""Generate a structured JSON object representing the current investment portfolio.
-The JSON must follow this format:
+        user_prompt = f"""Given the extracted current portfolio below, generate the gold standard JSON object as shown.
+If you need missing info for any field (like sector, region, rationale, etc), deduce it using the rest of the report content as context, or make a professional estimate.
+**ONLY use the tickers in this extracted list as the current portfolio.**
 
+GOLD STANDARD FORMAT:
 {gold_standard}
 
-Instructions:
-- Extract all assets and their properties from the report content.
-- For each asset:
-    - Set "isNew": true if the ticker is not in the prior portfolio, otherwise false.
-    - Set "wasRemoved": false for current assets.
-- For any ticker that appears in the prior portfolio but NOT in the current report content, append it to the end of the assets list with:
-    - "wasRemoved": true,
-    - "isNew": false,
-    - "weight": 0.0,
-    - "rationale": "Removed from current portfolio." (or similar)
-- Recalculate all portfolio_stats based on the *current* assets (excluding removed positions for position size).
-- Set "percent_removed" to the percentage of tickers in the prior portfolio that have been removed.
-- Only use allowed values for regions and horizons.
+EXTRACTED PORTFOLIO:
+{portfolio_section}
 
-Report content:
+OTHER CONTEXT (for rationale, region, sector, etc):
 {report_content}
-
-Prior portfolio weights:
-{json.dumps(old_portfolio_weights) if old_portfolio_weights else "None"}
 
 Today's date: {current_date}
 """
 
         # ---- LangChain Gemini Model ----
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-05-20")
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest")
         response = await llm.ainvoke([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -663,7 +713,7 @@ Today's date: {current_date}
             'sector_exposure': defaultdict(float),
             'regional_exposure': defaultdict(float),
             'investment_type_breakdown': defaultdict(float),
-            'percent_removed': 0.0  # NEW!
+            'percent_removed': 0.0
         }
         total_weight = 0.0
         for a in assets:
@@ -683,7 +733,7 @@ Today's date: {current_date}
         data['portfolio']['portfolio_stats'] = stats
         data['portfolio']['assets'] = assets
 
-        log_info("Successfully generated portfolio JSON data (LangChain Gemini + strict gold standard + percent_removed)")
+        log_info("Successfully generated portfolio JSON data (LangChain Gemini + hidden markdown extraction + gold standard + percent_removed)")
         return json.dumps(data, indent=2)
 
     except Exception as e:

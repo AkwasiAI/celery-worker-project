@@ -138,7 +138,7 @@ async def generate_full_alternative_report_llm(
     prompt = f"""
     You are a world-class investment analyst tasked with creating an ALTERNATIVE version called 'Alternative Report' of an existing investment report called 'Standard Report'.
     Your goal is to present a different, yet plausible, investment strategy and portfolio based on the same underlying market information (news corpus) and company principles.
-    The alternative report should NOT adhere to any previous portfolio retention strategy (e.g., a 60/40 rule). It's a fresh perspective.
+    The alternative report should NOT adhere to any previous portfolio retention strategy (e.g., a 60% retention rule). It's a fresh perspective.
 
     **Key Instructions for the Alternative Report:**
     1.  **Maintain Structure:** The alternative report MUST have the EXACT SAME SECTIONS and MARKDOWN HEADERS as the "Current Report Content" provided below. But you must change the title to Alternative Report.

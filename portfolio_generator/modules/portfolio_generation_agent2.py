@@ -80,7 +80,7 @@ Based on the provided Orasis Base Principles, Executive Summary Detailed Instruc
 **George Elliott's Latest Feedback (High Priority Context - consider this strongly):**
 {georges_feedback_text}
 
-**Previous Portfolio (for 60/40 consistency reference):**
+**Previous Portfolio (for 60% consistency in tickers/instruments reference):**
 {previous_portfolio_json_str}
 
 **Specific Instructions for this Draft:**
@@ -129,7 +129,7 @@ As CIO, review the following:
 4.  **LLM News Corpus (for context):**
     {llm_corpus_content}
 
-5.  **Previous Portfolio (for 60/40 consistency check):**
+5.  **Previous Portfolio (for 60% consistency check for tickers/instruments):**
     {previous_portfolio_json_str}
 
 6.  **Orasis Base Principles & Executive Summary Requirements (for validation - these are already fully formatted with dates etc.):**
@@ -137,7 +137,7 @@ As CIO, review the following:
     {executive_summary_detailed_prompt_content}
 
 **Your Tasks:**
-1.  **Assess:** Evaluate the Proposer's draft against the Critic's feedback, George's latest feedback, and all Orasis requirements (preferred tickers, 10-15 positions, allocation sum 100%, time horizon distribution, 60/40 consistency with previous portfolio, markdown and hidden JSON format).
+1.  **Assess:** Evaluate the Proposer's draft against the Critic's feedback, George's latest feedback, and all Orasis requirements (preferred tickers, 10-15 positions, allocation sum 100%, time horizon distribution, 60% consistency in tickers/instruments with previous portfolio, markdown and hidden JSON format).
 2.  **Consider Exa Search (Optional):** If enabled and you believe external information is CRITICAL to resolve a conflict or validate a key assumption, you can request a search by stating "REQUEST_EXA_SEARCH: [your search query]". (For now, this feature is informational; the graph will not execute a search).
 3.  **Decide and Instruct:**
     *   **If revisions are needed:** Provide clear, numbered, actionable instructions for the Portfolio Proposer to create the next draft. State "INSTRUCTIONS_FOR_REVISION:" followed by the instructions.

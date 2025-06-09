@@ -188,7 +188,7 @@ Produce exactly {n_news} news items for the "{category}" category. Each item mus
 
 For each news item, include:
 - A short, impactful headline (wrap in ### <Headline>)
-- A 50-word digest (human-readable, 1 paragraph). Focus on the key takeaway and its potential implication. If specific instruments were identified as relevant to this news item, subtly weave that context or implication into the digest if natural and concise. Do not just list the instruments. Ensure the digest reflects recency based on today's date.
+- A 50-word digest (human-readable, 1 paragraph). Focus on the key takeaway and its potential implication. Ensure the digest reflects recency based on today's date.
 - The **full source URL** for verification (Format: - citation: <full URL>)
 
 Prioritize the most recent and impactful news from the provided content. Ensure all {n_news} items are present and correctly formatted. No Extras! Please do not add any additional notes, maintain the structure of the format. Your output will be directly processed. Do not say 'Here is your news ......' Just follow the structure of the format
@@ -217,7 +217,7 @@ CRITIC_PROMPT = """
 You are a meticulous review agent.
 Critically evaluate the DRAFT news digest for the "{category}" category based on the following criteria. Today's date is {current_date}.
 1.  **Quantity**: Does the draft contain exactly {n_news} unique news items? (This is crucial)
-2.  **Relevance Context**: Does each digest subtly incorporate context related to relevant financial instruments IF such relevance was identified for its source article? The digest should not just list instruments but explain or imply the connection.
+2.  **Relevance Context**: Does each digest relate to the subject category which is "{category}"
 3.  **Recency**: Does each news item appear to be recent and not outdated, considering today's date?
 4.  **Clarity & Conciseness**: Is each item clearly written, concise, and easy to understand?
 5.  **URLs**:
@@ -228,7 +228,7 @@ Critically evaluate the DRAFT news digest for the "{category}" category based on
 8.  **Hallucinations (if provided)**: Review any flagged hallucinations. Do they need removal or rephrasing?
 
 
-If there are significant issues (e.g., wrong number of items, missing URLs, major unsupported claims, severe formatting errors, critical hallucinations requiring re-research, complete lack of instrument context where expected, clearly outdated news), reply with "NEEDS_MORE_RESEARCH" on the first line, followed by a bulleted list of specific issues.
+If there are significant issues (e.g., wrong number of items, missing URLs, major unsupported claims, severe formatting errors, critical hallucinations requiring re-research, clearly outdated news), reply with "NEEDS_MORE_RESEARCH" on the first line, followed by a bulleted list of specific issues.
 If the issues are minor and can be fixed by rephrasing or small edits (e.g., minor formatting, slight ambiguity, improving instrument context, rephrasing a hallucinated sentence if context allows), provide a bulleted list of short, actionable suggestions to improve the draft. Number your suggestions if possible.
 If the draft meets all criteria and no hallucinations were found or they are minor and easily fixable, reply with "All criteria met."
 
@@ -244,7 +244,7 @@ You are an expert revision writer.
 Your task is to improve the DRAFT news digest based on the provided CRITIQUE and HALLUCINATION LIST. Today's date is {current_date}.
 
 Follow these instructions:
-1.  **Address Critique**: Carefully review each point in the CRITIQUE. Implement all actionable suggestions. Pay special attention to ensuring exactly {n_news} items if the source material allows, that instrument relevance (if identified for an article) is subtly woven into its digest, and that news items are recent.
+1.  **Address Critique**: Carefully review each point in the CRITIQUE. Implement all actionable suggestions. Pay special attention to ensuring exactly {n_news} items if the source material allows, and that news items are recent.
 2.  **Handle Hallucinations**:
     *   If hallucinations are flagged, try to rephrase the affected sentence(s) to be factual based on the RESEARCH CONTENT, or remove the specific unsupported claim if it cannot be verified.
     *   Do NOT introduce new information not present in the research.

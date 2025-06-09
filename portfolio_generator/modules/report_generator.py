@@ -1136,8 +1136,16 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                     log_success(f"Successfully uploaded report to Firestore with ID: {firestore_report_doc_id}")
 
                     try:
-                        firestore_downloader = FirestoreDownloader()
-                        old_alternative_portfolio_weights = firestore_downloader.get_latest("portfolio-weights-alternative")
+                        uploader = FirestoreUploader(database="hedgefundintelligence")
+                        db = uploader.db
+                        alt_weights = db.collection('report-alternatives') \
+                            .where('doc_type', '==', 'portfolio-weights-alternative') \
+                            .where('is_latest', '==', True)
+
+                        for doc in alt_weights.stream():
+                            print(doc.id, doc.to_dict())
+
+                        old_alternative_portfolio_weights = json.loads(doc.to_dict()["content"])
                         log_success(f"Successfully Pulled Old Alternative portfolio weights")
                     except:
                         old_alternative_portfolio_weights = None

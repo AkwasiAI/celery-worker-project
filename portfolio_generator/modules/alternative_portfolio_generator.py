@@ -20,6 +20,8 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from portfolio_generator.modules.portfolio_generation_agent2 import extract_structured_parts_from_llm_output, ProposerDraft
 
 
+current_date = datetime.now(timezone.utc)
+
 # Check if Firestore is available (as in your original code)
 FIRESTORE_AVAILABLE = False
 try:
@@ -405,28 +407,39 @@ async def generate_and_upload_alternative_report(
         except:
             log_error("Could not convert previous_report_portfolio_json_str to json - will set old portfolio to NoNe")
             previous_report_portfolio_json = None
+
+        try:
+            log_info("about to commence generating Alternative portfolio")
+            current_date = datetime.now(timezone.utc)
             
-        alt_weights_json = await generate_portfolio_json(
+            alt_weights_json = await generate_portfolio_json(
 
-                client = None,  # Ignored, for compatibility
-                assets_list = None,
-                current_date = current_date ,
-                report_content = alternative_report_md,
-                # investment_principles=None,
-                old_portfolio_weights= previous_report_portfolio_json,
-                # search_client=None,
-                # search_results=None
-        )
+                    client = None,  # Ignored, for compatibility
+                    assets_list = None,
+                    current_date = current_date ,
+                    report_content = alternative_report_md,
+                    # investment_principles=None,
+                    old_portfolio_weights= previous_report_portfolio_json,
+                    # search_client=None,
+                    # search_results=None
+            )
+        except Exception as e:
+            log_error(f"Error generating Alternative portfolio will use old one: {e}")
+            alt_weights_json = previous_report_portfolio_json
 
-        current_date = datetime.now(timezone.utc)
-        # method to calculate benchmark metrics using portfolio_json
-        from portfolio_generator.modules.benchmark_metrics import calculate_benchmark_metrics
-        calculated_metrics_json = await calculate_benchmark_metrics(
-            openai_client,
-            alt_weights_json,
-            current_date
-        )
-        log_info(f"Calculated alternative benchmark metrics: {calculated_metrics_json}")
+        try:
+
+            # method to calculate benchmark metrics using portfolio_json
+            from portfolio_generator.modules.benchmark_metrics import calculate_benchmark_metrics
+            calculated_metrics_json = await calculate_benchmark_metrics(
+                openai_client,
+                alt_weights_json,
+                current_date
+            )
+            log_info(f"Calculated alternative benchmark metrics: {calculated_metrics_json}")
+        
+        except Exception as e:
+            log_error(f"Error Calculating alternative benchmark metric: {e}")     
 
         # upload calculated metrics to firestore under a new collection called "benchmark_metrics-alternative"
         uploader_bm = FirestoreUploader()
@@ -536,4 +549,4 @@ async def generate_and_upload_alternative_report(
 
     except Exception as e:
         log_error(f"Error during Firestore upload for alternative report elements: {e}")
-        return None, None
+        return None, None, None

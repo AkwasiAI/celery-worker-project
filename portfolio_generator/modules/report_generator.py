@@ -1145,10 +1145,10 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                         for doc in alt_weights.stream():
                             print(doc.id, doc.to_dict())
 
-                        old_alternative_portfolio_weights = json.loads(doc.to_dict()["content"])
+                        old_alternative_portfolio_weights = doc.to_dict()["content"]
                         log_success(f"Successfully Pulled Old Alternative portfolio weights")
                     except:
-                        old_alternative_portfolio_weights = None
+                        old_alternative_portfolio_weights = ""
                         log_warning("Could not pull Old Alternative portfolio weights")
                     
                     # Generate and upload alternative report for ePubs

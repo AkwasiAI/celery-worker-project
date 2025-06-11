@@ -276,6 +276,11 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
         Indices,000300.SS,Shanghai Shenzhen CSI 300 Index
         Indices,^AXJO,S&P/ASX 200
         ```
+        I have tried to get the ticker returns for a number of days for you to use as more context. These are the details below:
+
+        {ticker_returns}
+
+        Using this historical information, When selecting a portfolio, you can select an optimal portfolio that beats S&P 500, and MSCI 
 
 4.  **CRITICAL REQUIREMENT: Hidden JSON Output:**
     *   Immediately following the Markdown table, output a valid JSON array containing objects for each position in the table.

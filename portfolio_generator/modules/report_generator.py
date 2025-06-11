@@ -33,6 +33,7 @@ from portfolio_generator.modules.news_update_generator import generate_news_upda
 from portfolio_generator.modules.utils import news_digest_json_to_markdown, clean_markdown_block
 from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, predict_tomorrow
 from portfolio_generator.modules.alternative_portfolio_generator import generate_and_upload_alternative_report
+from portfolio_generator.modules.historical_returns import fetch_all_ticker_returns_combined
 
 import re
 
@@ -304,7 +305,16 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         #     log_success("Successfully Forecasted tomorrow's update")
         # except Exception as e:
         #     log_error(f"Exception running the 100 ticker evals: {e}")
-        
+
+        try:
+            log_info("About to fetch x to date price returns")
+            ticker_returns = fetch_all_ticker_returns_combined()
+            ticker_returns = json.dumps(ticker_returns, indent=2)
+            log_success("Successfully fetched the tickers price returns")
+        except Exception  as e:
+            ticker_returns = '{}'
+            log_error(f"Could not fetch all the tickers - will leave empty: {e}")
+
         try:
             # Execute searches using identical approach as original
             # log_info(f"Executing {len(search_queries)} web searches...")
@@ -395,7 +405,8 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     exec_summary_prompt = EXECUTIVE_SUMMARY_DETAILED_PROMPT.format(
         current_date=current_date,
         total_word_count=total_word_count,
-        current_year=current_year
+        current_year=current_year,
+        ticker_returns = ticker_returns
     )
     
     # Initialize section tracking variables
@@ -1305,6 +1316,70 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             
             pdf_result = pdf_service.generate_and_upload_pdf(
                 report_sections=new_alt_report,
+                report_date=current_date,
+                upload_to_gcs=not dry_run and not test_mode,
+                keep_local_copy=test_mode
+            )
+            
+            if pdf_result.get('gcs_path'):
+                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
+            
+            if pdf_result.get('local_path'):
+                log_info(f"PDF saved locally: {pdf_result['local_path']}")
+                
+    except Exception as e:
+        log_error(f"PDF generation failed: {e}")
+
+    try:
+        # Import the PDF service
+        from portfolio_generator.modules.pdf_report.report_pdf_service import ReportPDFService
+
+        # Only run PDF generation if we have report sections
+        if report_content:
+            pdf_service = ReportPDFService(bucket_name="performanceanalysisreportpdf")
+
+            log_info("Extracting Markdown for report...")
+
+            risk_content = extract_markdown(risk_content)
+
+            log_info("Generating PDF report...")
+            
+            pdf_result = pdf_service.generate_and_upload_pdf(
+                report_sections=risk_content,
+                report_date=current_date,
+                upload_to_gcs=not dry_run and not test_mode,
+                keep_local_copy=test_mode
+            )
+            
+            if pdf_result.get('gcs_path'):
+                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
+            
+            if pdf_result.get('local_path'):
+                log_info(f"PDF saved locally: {pdf_result['local_path']}")
+                
+    except Exception as e:
+        log_error(f"PDF generation failed: {e}")
+        
+        # Continue execution - PDF generation failure shouldn't stop the report
+
+    try:
+        # Import the PDF service
+        from portfolio_generator.modules.pdf_report.report_pdf_service import ReportPDFService
+
+        # Only run PDF generation if we have report sections
+        if report_content:
+            pdf_service = ReportPDFService(bucket_name="altperformanceanalysisreportpdf")
+        
+            log_info("Extracting Markdown for report...")
+
+            risk_content_alt = extract_markdown(risk_content_alt)
+            
+            log_info("Generating PDF report...")
+
+            
+            
+            pdf_result = pdf_service.generate_and_upload_pdf(
+                report_sections=risk_content_alt,
                 report_date=current_date,
                 upload_to_gcs=not dry_run and not test_mode,
                 keep_local_copy=test_mode

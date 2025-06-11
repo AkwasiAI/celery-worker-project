@@ -250,6 +250,36 @@ from portfolio_generator.modules.utils import is_placeholder_rationale
 #         log_error(f"Error generating JSON data: {e}")
 #         return json.dumps({"status": "error", "message": str(e)}, indent=2)
 
+
+# ---- Robust JSON Extraction ----
+def extract_json(text):
+    # Try code-fenced JSON first
+    code_fence_pattern = r'```(?:json)?\s*([\s\S]+?)\s*```'
+    match = re.search(code_fence_pattern, text)
+    if match:
+        candidate = match.group(1).strip()
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass  # fallback to next step
+
+    # Try to find first {...} or [...] block
+    bracket_pattern = r'({[\s\S]*?})|(\[[\s\S]*?\])'
+    match = re.search(bracket_pattern, text)
+    if match:
+        candidate = match.group(0).strip()
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass  # fallback to next step
+
+    # Last resort: try to parse the whole output
+    try:
+        return json.loads(text)
+    except Exception:
+        return None
+
+
 async def generate_alternative_portfolio_weights(client, old_assets_list, alt_report_content, search_client=None, investment_principles=""):
     """Generate alternative portfolio weights JSON based on old weights and a markdown report.
     
@@ -666,7 +696,7 @@ Today's date: {current_date}
 """
 
         # ---- LangChain Gemini Model ----
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest")
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-preview-05-06", generation_config={"response_mime_type": "application/json"})
         response = await llm.ainvoke([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -674,12 +704,12 @@ Today's date: {current_date}
         generated_content = response.content if hasattr(response, "content") else str(response)
 
         # ---- Extract JSON ----
-        json_pattern = r'```(?:json)?\s*({[\s\S]*?})\s*```'
-        json_matches = re.findall(json_pattern, generated_content)
-        json_str = json_matches[0] if json_matches else generated_content
+        # json_pattern = r'```(?:json)?\s*({[\s\S]*?})\s*```'
+        # json_matches = re.findall(json_pattern, generated_content)
+        # json_str = json_matches[0] if json_matches else generated_content
 
         try:
-            data = json.loads(json_str)
+            data = extract_json(generated_content)
         except Exception:
             log_error("Could not parse JSON from Gemini response.")
             return json.dumps({"status": "error", "message": "Invalid Gemini JSON"}, indent=2)

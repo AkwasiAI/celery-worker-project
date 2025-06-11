@@ -34,6 +34,36 @@ from portfolio_generator.modules.utils import news_digest_json_to_markdown, clea
 from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, predict_tomorrow
 from portfolio_generator.modules.alternative_portfolio_generator import generate_and_upload_alternative_report
 
+import re
+
+def extract_markdown(text):
+    """
+    Extracts markdown from LLM output.
+    - If a markdown code block is present, returns its content.
+    - If text looks like markdown, returns the text.
+    - Otherwise, returns the text as-is.
+    Always returns a string.
+    """
+    # Try to extract markdown inside triple backticks
+    pattern = r"```(?:markdown|md)?\s*([\s\S]*?)```"
+    match = re.search(pattern, text, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    # Heuristics: Check if the text looks like markdown
+    markdown_signals = [
+        r"^\s*#",          # Heading
+        r"^\s*[-*+]\s",    # Lists
+        r"\*\*.+\*\*",     # Bold
+        r"\*.+\*",         # Italic
+        r"`.+`",           # Inline code
+        r"\[.+\]\(.+\)",   # Links
+        r"\|\s?.+\|",      # Table
+    ]
+    if any(re.search(signal, text, re.MULTILINE) for signal in markdown_signals):
+        return text.strip()
+    # Fallback: just return the original text
+    return text.strip()
+
 
 # New helper for Gemini sanitization, using the google-genai SDK
 def sanitize_report_content_with_gemini(report_content: str) -> str:
@@ -73,6 +103,7 @@ def sanitize_report_content_with_gemini(report_content: str) -> str:
 
         # If we got back text, return it; otherwise fall back
         sanitized = response.text or report_content
+        sanitized = extract_markdown(sanitized)
         log_info("Report content successfully sanitized with Gemini.")
         return sanitized
 

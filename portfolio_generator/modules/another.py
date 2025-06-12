@@ -189,7 +189,7 @@ Produce exactly {n_news} news items for the "{category}" category. Each item mus
 For each news item, include:
 - A short, impactful headline (wrap in ### <Headline>)
 - A 50-word digest (human-readable, 1 paragraph). Focus on the key takeaway and its potential implication. Ensure the digest reflects recency based on today's date.
-- The **full source URL** for verification (Format: - citation: <full URL>)
+- The **full source URL** for verification (Format: - citation: <full URL>). 1 citation is enough. for each news item
 
 Prioritize the most recent and impactful news from the provided content. Ensure all {n_news} items are present and correctly formatted. No Extras! Please do not add any additional notes, maintain the structure of the format. Your output will be directly processed. Do not say 'Here is your news ......' Just follow the structure of the format
 

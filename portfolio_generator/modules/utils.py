@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 
 # Helper functions for post-processing
-allowed_horizons = {"6-12M", "3-6M", "12-18M", "12+"}
+allowed_horizons = {"1-3M","3-6M","6-12M", "12-18M", "18+"}
 
 def is_date_string(s):
     """Check if a string is a date string.

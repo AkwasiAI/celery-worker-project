@@ -421,7 +421,7 @@ The JSON should follow this format:
         "position": "LONG or SHORT",
         "weight": 0.XX (decimal, not percentage),
         "target_price": XX.XX (numerical target price),
-        "horizon": "6-12M or 3-6M or 12-18M or 18M+",
+        "horizon": "1-3M or 3-6M or 6-12M or 12-18M or 18M+",
         "rationale": "Specific investment rationale tied to investment principles",
         "region": "Region name",
         "sector": "Sector name",

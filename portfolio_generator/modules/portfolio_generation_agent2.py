@@ -77,7 +77,7 @@ Based on the provided Orasis Base Principles, Executive Summary Detailed Instruc
 **LLM News Corpus (Key insights derived from recent news):**
 {llm_corpus_content}
 
-**George Elliott's Latest Feedback (High Priority Context - consider this strongly):**
+**George Elliott's Latest Feedback (High Priority Context - consider this strongly): content here like time horizon, allocation and number of position overwrites others if any other is given in the instruction**
 {georges_feedback_text}
 
 **Previous Portfolio (for 60% consistency in tickers/instruments reference):**
@@ -88,7 +88,7 @@ Based on the provided Orasis Base Principles, Executive Summary Detailed Instruc
 2.  Your proposal MUST reflect understanding and consideration of insights from "George Elliott's Latest Feedback". If specific news, sectors, or sentiments are highlighted there, ensure your themes and asset choices align or address them.
 3.  Aim to retain minimum of 60% of the assets/themes/instruments from the 'Previous Portfolio' if their rationale still holds given the 'LLM News Corpus' AND "George Elliott's Latest Feedback". Introduce approximately 40% new or significantly re-weighted positions unless otherwise stated by George.
 4.  Ensure all allocation percentages sum to 100.0%.
-5.  Adhere to George's specified time horizon distribution.
+5.  Adhere to George's specified time horizon distribution in his feedback if provided.
 6.  Provide clear, forward-looking rationales in the narrative, integrating insights from all provided contexts.
 7.  Output the ENTIRE executive summary including the narrative, the Markdown table, and the hidden JSON block for portfolio positions (<!-- PORTFOLIO_POSITIONS_JSON: [your JSON array here] -->), all as a single string. DO NOT ADD ANYTHING ELSE! YOUR OUTPUT WILL BE PROCESSED DIRECTLY.
 {cio_revision_instructions}
@@ -104,7 +104,7 @@ Please review the following "Portfolio Proposer's Draft" in the context of the "
 **LLM News Corpus (Key insights derived from recent news):**
 {llm_corpus_content}
 
-**George Elliott's Latest Feedback (Important context on recent focus):**
+**George Elliott's Latest Feedback (Important context on recent focus, Highest Priority if provided. Overwrites other instructions):**
 {georges_feedback_text}
 
 **Your Task:**
@@ -123,7 +123,7 @@ As CIO, review the following:
 2.  **Portfolio Critic's Feedback:**
     {critic_feedback}
 
-3.  **George Elliott's Latest Feedback (Crucial Context):**
+3.  **George Elliott's Latest Feedback (Crucial Context, Highest Priority if provided. Overwrites other instructions):**
     {georges_feedback_text}
 
 4.  **LLM News Corpus (for context):**
@@ -137,7 +137,7 @@ As CIO, review the following:
     {executive_summary_detailed_prompt_content}
 
 **Your Tasks:**
-1.  **Assess:** Evaluate the Proposer's draft against the Critic's feedback, George's latest feedback, and all Orasis requirements (preferred tickers, 10-15 positions, allocation sum 100%, time horizon distribution, 60% consistency in tickers/instruments with previous portfolio, markdown and hidden JSON format).
+1.  **Assess:** Evaluate the Proposer's draft against the Critic's feedback, George's latest feedback (Highest Priority), and all Orasis requirements (preferred tickers, 10-15 positions, allocation sum 100%, time horizon distribution, 60% consistency in tickers/instruments with previous portfolio, markdown and hidden JSON format).
 2.  **Consider Exa Search (Optional):** If enabled and you believe external information is CRITICAL to resolve a conflict or validate a key assumption, you can request a search by stating "REQUEST_EXA_SEARCH: [your search query]". (For now, this feature is informational; the graph will not execute a search).
 3.  **Decide and Instruct:**
     *   **If revisions are needed:** Provide clear, numbered, actionable instructions for the Portfolio Proposer to create the next draft. State "INSTRUCTIONS_FOR_REVISION:" followed by the instructions.

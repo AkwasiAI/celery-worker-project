@@ -178,7 +178,7 @@ EXECUTIVE_SUMMARY_DETAILED_PROMPT = '''**PROMPT: Generate a Forward-Looking Inve
 
 3.  **CRITICAL REQUIREMENT: Portfolio Holdings Table:**
     *   You MUST include a comprehensive summary table displaying the *current* portfolio positions, reflecting the forward-looking strategy.
-    *   **Portfolio Construction:** Select **10 to 15 tickers** from the `PREFERRED_TICKERS` list below. Aim for diversification across categories that align with the forward-looking strategy. *Consider George's preferred time horizon distribution (~30% <3mo, ~30% 3-6mo, ~30% 6-12mo, ~10% 1yr+) when assigning Time Horizons.*
+    *   **Portfolio Construction:** Select **a number of tickers (maybe 10 to 15 if there's no preference)** from the `PREFERRED_TICKERS` list below. Aim for diversification across categories that align with the forward-looking strategy. *Consider George's preferred time horizon distribution when assigning Time Horizons. Short Term( 1-3M), Medium Term (3-6M, 6-12M), and Long Term (12-18M, 18M+)*
     *   **Table Format:** Use Markdown for the table.
     *   **Table Columns:**
         *   `Asset/Ticker`: Use the real, verifiable ticker symbol from the list.
@@ -328,7 +328,7 @@ Leveraging Orasis' core thesis on analyzing trade flow shifts, the portfolio foc
 | GOGL         | Long          | 6.0%         | "3-6 months" | Medium           |
 | SBLK         | Long          | 5.0%         | "6-12 months"| Medium           |
 | WPM          | Long          | 6.0%         | "12-18 months"  | Medium           |
-| ALB          | Long          | 7.0%         | "2-3 years"  | Medium           |
+| ALB          | Long          | 7.0%         | "18 months+" | Medium           |
 | TDW          | Long          | 7.0%         | "1-3 months" | High             |
 | SPY          | Long          | 15.0%        | "12-18 months"  | High             |
 | **Total**    |               | **100.0%**   |              |                  |
@@ -344,7 +344,7 @@ Leveraging Orasis' core thesis on analyzing trade flow shifts, the portfolio foc
   {{"asset": "GOGL", "position_type": "Long", "allocation_percent": 6.0, "time_horizon": "3-6 months", "confidence_level": "Medium"}},
   {{"asset": "SBLK", "position_type": "Long", "allocation_percent": 5.0, "time_horizon": "6-12 months", "confidence_level": "Medium"}},
   {{"asset": "WPM", "position_type": "Long", "allocation_percent": 6.0, "time_horizon": "12-18 months", "confidence_level": "Medium"}},
-  {{"asset": "ALB", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "2-3 years", "confidence_level": "Medium"}},
+  {{"asset": "ALB", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "18 months+", "confidence_level": "Medium"}},
   {{"asset": "TDW", "position_type": "Long", "allocation_percent": 7.0, "time_horizon": "1-3 months", "confidence_level": "High"}},
   {{"asset": "SPY", "position_type": "Long", "allocation_percent": 15.0, "time_horizon": "12-18 months", "confidence_level": "High"}}
 ]
@@ -359,7 +359,7 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
 **Persona:** You are a Senior Investment Analyst at Orasis Capital, a hedge fund specializing in global macro strategies driven by trade flow analysis, with deep expertise in shipping and commodities. You report directly to George, the fund owner.
 
 **Objective:** Generate a comprehensive **Investment Portfolio Analysis Report**. This involves:
-1.  **Constructing a Sample Portfolio:** Create a diversified portfolio of **15-25 positions** strictly adhering to Orasis Capital's investment thesis and owner George's specific preferences (detailed below).
+1.  **Constructing a Sample Portfolio:** Create a diversified portfolio of **a number of positions (10-15 positions if there are no special preferences)** strictly adhering to Orasis Capital's investment thesis and owner George's specific preferences (detailed below).
 2.  **Providing Detailed Rationale:** Justify *each* portfolio position (long and short) with specific, data-backed reasoning linked directly to the Orasis investment thesis and current market conditions.
 3.  **Structuring the Analysis:** Present the findings in a professional report format.
 
@@ -377,13 +377,13 @@ BASE_SYSTEM_PROMPT = '''**SYSTEM PROMPT: Orasis Capital Investment Portfolio Ana
     *   Focus on impacts of changing trade relationships/policies on countries/industries (esp. China, Asia, Middle East, Africa vs. US/Europe).
     *   Utilize **shipping trends (tanker, dry bulk, container, LNG, LPG, offshore)** as primary leading indicators for macro analysis (90% of trade volume).
     *   Identify manageable vs. unmanageable impacts of trade disruptions.
-*   **Owner Preferences (George):**
+*   **Default Preferences:**
     *   **Risk Profile:** Blend high-risk/high-reward opportunities with balanced/defensive positions.
     *   **Time Horizon Distribution (Strict Allocation Target):**
-        *   ~30% Short-Term (1 month - 1 quarter)
-        *   ~30% Medium-Term (1 quarter - 6 months)
-        *   ~30% Medium-Long Term (6 months - 1 year)
-        *   ~10% Long-Term (2 - 3 years)
+        *   ~30% Short-Term (1 - 3 months)
+        *   ~30% Medium-Term (3 - 6 months )
+        *   ~30% Medium-Long Term (6 - 12 months)
+        *   ~10% Long-Term (12-18 months, and 18 months+)
     *   **Strategy:** Employ **leverage** and **hedging**. Include **genuine SHORT positions** based on fundamental weakness/negative outlook (not just portfolio hedges). Target **1-3 specific short recommendations**.
     *   **Regional Focus:** Diversify across **US, Europe, and Asia**. Capture opportunities related to trade shifts involving China, Asia, Middle East, and Africa.
     *   **Asset Class Focus:**

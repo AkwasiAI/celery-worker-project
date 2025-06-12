@@ -665,7 +665,7 @@ async def generate_portfolio_json(
             "- position (LONG or SHORT)\n"
             "- weight (decimal, sum of weights should be ~1.0)\n"
             "- target_price (numerical, or null if not specified)\n"
-            "- horizon (one of: \"6-12M\", \"3-6M\", \"12-18M\", \"18M+\")\n"
+            "- horizon (one of:  \"1-3M\", \"3-6M\", \"6-12M\", \"12-18M\", \"18M+\")\n"
             "- rationale (clear, principle-based)\n"
             "- region (one of: North America, Europe, Asia, Latin America, Africa, Oceania, Global)\n"
             "- sector\n"

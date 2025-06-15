@@ -191,7 +191,7 @@ For each news item, include:
 - A 50-word digest (human-readable, 1 paragraph). Focus on the key takeaway and its potential implication. Ensure the digest reflects recency based on today's date.
 - The **full source URL** for verification (Format: - citation: <full URL>). 1 citation is enough. for each news item
 
-Prioritize the most recent and impactful news from the provided content. Ensure all {n_news} items are present and correctly formatted. No Extras! Please do not add any additional notes, maintain the structure of the format. Your output will be directly processed. Do not say 'Here is your news ......' Just follow the structure of the format
+Prioritize the most recent (Last 2-3 days max) and impactful news from the provided content. Ensure all {n_news} items are present and correctly formatted. No Extras! Please do not add any additional notes, maintain the structure of the format. Your output will be directly processed. Do not say 'Here is your news ......' Just follow the structure of the format
 
 Format for each item:
 ### <Headline>
@@ -218,7 +218,7 @@ You are a meticulous review agent.
 Critically evaluate the DRAFT news digest for the "{category}" category based on the following criteria. Today's date is {current_date}.
 1.  **Quantity**: Does the draft contain exactly {n_news} unique news items? (This is crucial)
 2.  **Relevance Context**: Does each digest relate to the subject category which is "{category}"
-3.  **Recency**: Does each news item appear to be recent and not outdated, considering today's date?
+3.  **Recency**: Does each news item appear to be recent (Last 2-3 days max) and not outdated, considering today's date?
 4.  **Clarity & Conciseness**: Is each item clearly written, concise, and easy to understand?
 5.  **URLs**:
     *   Are all source URLs present?
@@ -281,7 +281,7 @@ The current search queries used were:
 {queries}
 
 Based on the critique (especially if it indicates a lack of relevant results or insufficient instrument-relevant content), suggest 1-3 new or refined search queries.
-The goal is to expand or diversify results for "{category}" news from trusted domains, ideally finding content that might have stronger connections to financial instruments and is recent.
+The goal is to expand or diversify results for "{category}" news from trusted domains, ideally finding content that might have stronger connections to financial instruments and is recent (Last 2-3 days max).
 Consider:
 - Broader terms related to the category that might uncover more articles.
 - Different angles or sub-topics within the category.

@@ -70,7 +70,7 @@ log.info(f"LLM initialized with Google Gemini model: {MODEL.model}")
 # Initialize a separate Gemini Model specifically for JSON output from the analyzer
 # This leverages Gemini's native JSON mode for more reliable structured output.
 MODEL_FOR_ANALYZER_JSON = ChatGoogleGenerativeAI(
-    model="gemini-1.5-pro",
+    model="gemini-2.5-flash-preview-05-20",
     temperature=0.0,
     GEMINI_API_KEY=GEMINI_API_KEY,
     generation_config={"response_mime_type": "application/json"}
@@ -81,9 +81,16 @@ log.info(f"LLM for JSON (analyzer) initialized with Google Gemini model: {MODEL_
 exa = Exa(api_key=EXA_API_KEY)
 
 TRUSTED_DOMAINS = [
-    "bloomberg.com", "reuters.com", "ft.com", "tradewindsnews.com",
-    "lloydslist.com", "hellenicshippingnews.com", "seatrade-maritime.com",
-    "clarksons.com", "iea.org", "spglobal.com"
+    "bloomberg.com", 
+    "reuters.com", 
+    "ft.com", 
+    "tradewindsnews.com",
+    "lloydslist.com", 
+    "hellenicshippingnews.com", 
+    # "seatrade-maritime.com",
+    "clarksons.com", 
+    "iea.org", 
+    "spglobal.com"
 ]
 NEWS_CATEGORIES = [
     "Shipping",
@@ -96,7 +103,7 @@ NEWS_CATEGORIES = [
 NEWS_PER_CATEGORY = 5
 MAX_DAYS_LOOKBACK = 2 
 HALLUCINATION_CHECK_ENABLED = False
-MAX_ITERATION = 4
+MAX_ITERATION = 5
 
 DIGESTS_FILE = "news_human_digests.json" # Changed output file name
 CORPORA_FILE = "news_llm_corpora.json"   # Changed output file name
@@ -852,7 +859,7 @@ async def run_full_news_agent():
         
         final_state_for_category = None
         try:
-            configuration = {"recursion_limit": 70} 
+            configuration = {"recursion_limit": 150} 
             async for step_output in graph.astream(initial_state, config=configuration):
                 node_name = list(step_output.keys())[0]
                 final_state_for_category = step_output[node_name]

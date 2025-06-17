@@ -457,11 +457,12 @@ def text_to_mindmap(text_data):
             print("\n--- Generated Mindmap JSON (LangChain) ---")
             print(json.dumps(mindmap_json_data, indent=2, ensure_ascii=False))
 
+
             # Save the JSON and get stats
             generator.save_json(mindmap_json_data, "mindmap_lc.json")
             stats = generator.get_mindmap_stats(mindmap_json_data)
             print("\n--- Mindmap Statistics ---")
-            return(json.dumps(stats, indent=2))
+            return(json.dumps(mindmap_json_data, indent=2))
         else:
             print("Failed to generate mindmap JSON.")
     else:

@@ -34,6 +34,7 @@ from portfolio_generator.modules.utils import news_digest_json_to_markdown, clea
 from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, predict_tomorrow
 from portfolio_generator.modules.alternative_portfolio_generator import generate_and_upload_alternative_report
 from portfolio_generator.modules.historical_returns import fetch_all_ticker_returns_combined
+from portfolio_generator.modules.mindmap import text_to_mindmap
 
 import re
 
@@ -1386,7 +1387,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             )
             
             if pdf_result.get('gcs_path'):
-                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
+                log_error(f"PDF generation failed: {e}")
             
             if pdf_result.get('local_path'):
                 log_info(f"PDF saved locally: {pdf_result['local_path']}")
@@ -1394,14 +1395,48 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     except Exception as e:
         log_error(f"PDF generation failed: {e}")
 
-    try:
 
+    try:
+        mindmap = text_to_mindmap(report_content)
+        if mindmap:
+            log_success(f"Mindmap generated successfully!")
+            try:
+                uploader_mmp = FirestoreUploader()
+                mmp_col = uploader_mmp.db.collection("mindmap")
+                # Mark existing as not latest
+                try:
+                    mmp_q = mmp_col.filter("doc_type", "==", "mindmap").filter("is_latest", "==", True)
+                except AttributeError:
+                    mmp_q = mmp_col.where(filter=FieldFilter("doc_type", "==", "mindmap")).where(filter=FieldFilter("is_latest", "==", True))
+                for doc in mmp_q.stream():
+                    mmp_col.document(doc.id).update({"is_latest": False})
+                mmp_ref = mmp_col.document()
+                mmp_ref.set({
+                    "content": mindmap,
+                    "doc_type": "mindmap",
+                    "file_format": "json_str",
+                    "timestamp": firestore.SERVER_TIMESTAMP,
+                    "is_latest": True,
+                    "source_report_id": firestore_report_doc_id,
+                    "created_at": datetime.now(timezone.utc)
+                })
+                log_success(f"Mindmap uploaded with id: {mmp_ref.id}")
+            except Exception as e_mmp:
+                log_warning(f"Failed to upload Mindmap: {e_mmp}")
+        else:
+            log_error(f"Mindmap generation failed, and is empty")
+
+    except Exception as e:
+        log_error(f"Mindmap generation failed: {e}")
+
+    try:
         # List of your JSON files
         files_to_delete = [
                     "scratchpads/portfolio_gen_scratchpad.json",
                     "news_human_digests.json",
                     "news_llm_corpora.json",
-                    "processed_seen_urls.json"
+                    "processed_seen_urls.json",
+                    "mindmap_lc.json"
                            ]
 
         for file in files_to_delete:

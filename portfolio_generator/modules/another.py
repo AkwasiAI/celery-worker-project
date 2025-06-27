@@ -109,7 +109,7 @@ DIGESTS_FILE = "news_human_digests.json" # Changed output file name
 CORPORA_FILE = "news_llm_corpora.json"   # Changed output file name
 SEEN_URLS_FILE = "processed_seen_urls.json" # Changed output file name
 
-current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+# current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 def load_file(path):
     log.info(f"Loading file: {path}")
@@ -321,10 +321,11 @@ class NewsAgentState(TypedDict):
 def plan_node(state: NewsAgentState) -> NewsAgentState:
     category = state['category']
     log.info(f"[{category}] Entering PLAN node")
+    current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     messages = [
         SystemMessage(content=PLAN_PROMPT.format(
             category=category,
-            instruments=INSTRUMENT_LIST_TEXT[:2000], 
+            instruments=INSTRUMENT_LIST_TEXT[:20000], 
             principles=INVESTMENT_PRINCIPLES,
             n_news=NEWS_PER_CATEGORY,
             current_date=current_date_str 
@@ -557,6 +558,7 @@ def select_digest_articles_node(state: NewsAgentState) -> NewsAgentState:
 def writer_node(state: NewsAgentState) -> NewsAgentState:
     category = state["category"]
     log.info(f"[{category}] Entering WRITER node")
+    current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     articles_for_digest = state["research"] 
     
     if not articles_for_digest and NEWS_PER_CATEGORY > 0:
@@ -619,6 +621,7 @@ def hallucination_node(state: NewsAgentState) -> NewsAgentState:
 def critic_node(state: NewsAgentState) -> NewsAgentState:
     category = state["category"]
     log.info(f"[{category}] Entering CRITIC node")
+    current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     digest_to_critique = state["human_digest"]
     hallucinations = state.get("hallucinations", [])
     num_selected_for_digest = len(state.get("research", []))
@@ -666,6 +669,7 @@ def critic_node(state: NewsAgentState) -> NewsAgentState:
 def revision_node(state: NewsAgentState) -> NewsAgentState:
     category = state["category"]
     log.info(f"[{category}] Entering REVISION node. Critique status: {state['critique']}")
+    current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     if state["critique"] == "ALL_CRITERIA_MET":
         return {**state, "final_digest": state["human_digest"]}
 
@@ -702,6 +706,7 @@ def refiner_node(state: NewsAgentState) -> NewsAgentState:
     category = state["category"]
     log.info(f"[{category}] Entering QUERY REFINER node.")
     current_lookback = state.get("current_date_lookback", 1)
+    current_date_str = datetime.datetime.now().strftime("%Y-%m-%d")
     new_lookback = min(current_lookback + 1, MAX_DAYS_LOOKBACK) 
     if new_lookback == current_lookback and current_lookback == MAX_DAYS_LOOKBACK:
         log.info(f"[{category}] Date lookback already at MAX_DAYS_LOOKBACK ({MAX_DAYS_LOOKBACK}). Not expanding further for date.")

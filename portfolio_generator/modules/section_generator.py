@@ -4,6 +4,9 @@ from portfolio_generator.modules.logging import log_info, log_warning, log_error
 import os
 from google import genai                          # New SDK import
 from google.genai import types
+from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree
+import traceback
 
 async def generate_section(client, section_name, system_prompt, user_prompt, search_results=None, previous_sections=None, target_word_count=3000, investment_principles=None):
     """Generate a section of the investment portfolio report.
@@ -112,7 +115,7 @@ async def generate_section(client, section_name, system_prompt, user_prompt, sea
         log_info(f"Error generating {section_name}: {str(e)}")
         return f"Error generating {section_name}: {str(e)}"
 
-async def generate_section_with_web_search(
+async def generate_section_with_web_search_old(
     client,
     section_name: str,
     system_prompt: str,
@@ -230,3 +233,174 @@ async def generate_section_with_web_search(
         if error_body:
             log_error(f"Error body: {error_body}")
         return f"Error generating {section_name}: {type(e).__name__}: {e}"
+
+
+
+@traceable(run_type="llm")
+async def generate_section_with_web_search(
+    client, # It's better to initialize the client once outside the function
+    section_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    search_results: str = None,
+    previous_sections: dict = None,
+    target_word_count: int = 3000,
+    investment_principles: str = None
+) -> str:
+    """Generate a section using Gemini Pro via the Google Gen AI SDK with Google Search grounding and LangSmith tracing."""
+
+    # 1. Initialize the Gen AI SDK client if not provided
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    
+    # LangSmith: Get the current run object to post metadata
+    run_tree = get_current_run_tree()
+
+    if run_tree:
+        run_tree.name = f"Generate Section: {section_name}"
+
+    # 1. Initialize the Gen AI SDK client if not provided
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    
+    model_name = "gemini-2.5-flash-preview-05-20" # Example model
+    
+    log_info(f"Generating {section_name} with Google-grounded {model_name}...")
+    
+    try:
+        # 1. Build the prompt template (same as before)
+        prompt_template = """# {section_name}
+
+===== System Prompt =====
+{system_prompt}
+
+===== Investment Principles =====
+{investment_principles_content}
+
+===== Search Results =====
+{search_results_content}
+
+===== User Prompt =====
+{user_prompt}
+
+===== Word Count Instruction =====
+{word_count_instruction}
+
+===== Previous Sections =====
+{previous_sections_content}
+
+===== IMPORTANT: REVIEW AND FOLLOW THESE CORE INSTRUCTIONS =====
+
+{user_prompt}
+"""
+        word_count_instruction = (
+            f"Please write approximately {target_word_count} words for this section, maintaining depth and quality."
+            if target_word_count else ""
+        )
+        
+        previous_sections_content = ""
+        if isinstance(previous_sections, dict) and previous_sections:
+            previous_sections_content = "## Previous Sections\n"
+            for name, content in previous_sections.items():
+                previous_sections_content += f"### {name}\n{content}\n\n"
+        
+        investment_principles_content = (
+            f"Investment principles:\n{investment_principles}"
+            if investment_principles else ""
+        )
+        search_results_content = (
+            f"Here is the latest information from web searches:\n\n{search_results}"
+            if search_results else ""
+        )
+        
+        full_prompt = prompt_template.format(
+            section_name=section_name,
+            system_prompt=system_prompt,
+            investment_principles_content=investment_principles_content,
+            search_results_content=search_results_content,
+            user_prompt=user_prompt,
+            word_count_instruction=word_count_instruction,
+            previous_sections_content=previous_sections_content,
+        )
+        # 2. Configure Google Search grounding (same as before)
+
+        config = types.GenerateContentConfig(
+            tools=[
+                types.Tool(
+                    google_search=types.GoogleSearchRetrieval(
+                        dynamic_retrieval_config=types.DynamicRetrievalConfig(
+                            dynamic_threshold=0.6
+                        )
+                    )
+                )
+            ]
+        )
+        
+        # 3. LangSmith: Log the exact inputs before making the call
+        if run_tree:
+            run_tree.inputs = {"prompt": full_prompt}
+            run_tree.extra = {
+                "metadata": {
+                    "model_name": model_name,
+                    "target_word_count": target_word_count,
+                    "has_search_results_provided": bool(search_results),
+                    "has_previous_sections": bool(previous_sections),
+                    "google_search_grounding_enabled": True,
+                }
+            }
+
+        # 4. Call Gemini
+        log_info(f"Calling Gemini 2.5 Pro for {section_name}")
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=  "gemini-2.5-flash-preview-05-20", #"gemini-2.5-pro-preview-05-06",  # or your specific model tag
+            contents=full_prompt,
+            config=config
+        )
+
+
+        # 5. Call Gemini 2.5 Pro in a thread to avoid blocking
+        log_info(f"Calling Gemini 2.5 Pro for {section_name}")
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=  "gemini-2.5-flash-preview-05-20", #"gemini-2.5-pro-preview-05-06",  # or your specific model tag
+            contents=full_prompt,
+            config=config
+        )
+        
+
+        
+        # 5. Extract and return the text
+        if response and hasattr(response, "text"):
+            generated_text = response.text
+            word_count = len(generated_text.split())
+            log_info(f"Generated {section_name} ({word_count} words)")
+            
+            # 6. LangSmith: Log the successful output and metadata
+            if run_tree:
+                run_tree.outputs = {"generation": generated_text}
+                # Log usage and grounding metadata if available
+                if response.usage_metadata:
+                    run_tree.extra["metadata"]["usage"] = {
+                        "prompt_token_count": response.usage_metadata.prompt_token_count,
+                        "candidates_token_count": response.usage_metadata.candidates_token_count,
+                        "total_token_count": response.usage_metadata.total_token_count,
+                    }
+                if hasattr(response, 'grounding_metadata') and response.grounding_metadata:
+                     run_tree.extra["metadata"]["grounding_metadata"] = response.grounding_metadata
+
+            return generated_text
+        
+        log_info(f"Empty or unexpected response for {section_name}")
+        return f"Error: Empty response received for {section_name}"
+    
+    except Exception as e:
+        # The @traceable decorator will automatically log the exception,
+        # but we can add more details to the error message if we want.
+        error_message = f"Error generating {section_name}: {type(e).__name__}: {e}"
+        log_error(error_message)
+        log_error(traceback.format_exc())
+        
+        # You could also explicitly update the run here if needed, but it's not required.
+        # if run_tree:
+        #     run_tree.end(error=error_message)
+            
+        return error_message

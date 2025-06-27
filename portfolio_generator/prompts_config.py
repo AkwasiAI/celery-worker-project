@@ -452,13 +452,104 @@ Format in markdown starting with:
 ## Performance Analysis
 '''
 
-ALLOCATION_CHANGES_PROMPT = '''Write a concise summary (around 50 words) explaining the changes between the prior allocation and the current allocation, highlighting how these adjustments align with the Orasis investment principles.
+ALLOCATION_CHANGES_PROMPT = '''Write a concise summary (around 50 words) explaining the changes between the prior allocation and the current allocation, highlighting how these adjustments align with the Orasis investment principles. 
+Please write simple in simple plain markdown text, don't include any JSON in your output. It is a short summary, your output will be rendered directly by our markdown renderer.
 
 The prior allocation is:
 {old_portfolio_weights}
 
 The current allocation is:
 {current_portfolio_weights}
+
+Ticker names for referencing (FYI so you don't guess what the names are)
+
+```csv
+Category,Ticker,Name
+Shipping Equities,HAFNI.OL,Hafnia Ltd
+Shipping Equities,STNG,Scorpio Tankers Inc
+Shipping Equities,TRMD,TORM PLC
+Shipping Equities,FRO,Frontline PLC
+Shipping Equities,ECO,Okeanis Eco Tankers Corp
+Shipping Equities,DHT,DHT Holdings Inc
+Shipping Equities,INSW,International Seaways Inc
+Shipping Equities,NAT,Nordic American Tankers Ltd
+Shipping Equities,TEN,Tsakos Energy Navigation Ltd
+Shipping Equities,IMPP,Imperial Petroleum Inc
+Shipping Equities,PSHG,Performance Shipping Inc
+Shipping Equities,TORO,Toro Corp
+Shipping Equities,TNK,Teekay Tankers Ltd
+Shipping Equities,PXS,Pyxis Tankers Inc
+Shipping Equities,TOPS,TOP Ships Inc
+Shipping Equities,DSX,Diana Shipping Inc
+Shipping Equities,GNK,Genco Shipping & Trading Ltd
+Shipping Equities,GOGL,Golden Ocean Group Ltd
+Shipping Equities,NMM,Navios Maritime Partners LP
+Shipping Equities,SB,Safe Bulkers Inc
+Shipping Equities,SBLK,Star Bulk Carriers Corp
+Shipping Equities,SHIP,Seanergy Maritime Holdings Cor
+Shipping Equities,2020.OL,2020 Bulkers Ltd
+Shipping Equities,HSHP,Himalaya Shipping Ltd
+Shipping Equities,EDRY,EuroDry Ltd
+Shipping Equities,JINO.XD,Jinhui Shipping & Transportation
+Shipping Equities,CTRM,Castor Maritime Inc
+Shipping Equities,ICON,Icon Energy Corp
+Shipping Equities,GLBS,Globus Maritime Ltd
+Shipping Equities,CMRE,Costamare Inc
+Shipping Equities,DAC,Danaos Corp
+Shipping Equities,GSL,Global Ship Lease Inc
+Shipping Equities,ESEA,Euroseas Ltd
+Shipping Equities,MPCC.OL,MPC Container Ships ASA
+Shipping Equities,ZIM,ZIM Integrated Shipping Services
+Shipping Equities,SFL,SFL Corp Ltd
+Shipping Equities,BWLPGO.XD,BW LPG Ltd
+Shipping Equities,LPG,Dorian LPG Ltd
+Shipping Equities,CCEC,Capital Clean Energy Carriers
+Shipping Equities,GASS,StealthGas Inc
+Shipping Equities,DLNG,Dynagas LNG Partners LP
+Shipping Equities,AGASO.OL,Avance Gas Holding Ltd
+Shipping Equities,ALNGO.OL,Awilco LNG AS
+Shipping Equities,CLCO,Cool Co Ltd
+Shipping Equities,FLNG,FLEX LNG Ltd
+Energy Services,RIG,Transocean Ltd
+Energy Services,HLX,Helix Energy Solutions Group Inc
+Energy Services,PRS.OL,Prosafe SE
+Energy Services,SPM.MI,Saipem SpA
+Energy Services,SBMO.VI,SBM Offshore NV
+Energy Services,TDW,Tidewater Inc
+Commodities Equities,RIO,Rio Tinto PLC
+Commodities Equities,BHP,BHP Group Ltd
+Commodities Equities,VALE,Vale SA
+Commodities Equities,GLNCY,Glencore PLC
+Commodities Equities,ADM,Archer-Daniels-Midland Co
+Commodities Equities,WLMIY,Wilmar International Ltd
+Commodities Equities,BG,Bunge Global SA
+Commodities Equities,SHEL,Shell PLC
+Commodities Equities,XOM,Exxon Mobil Corp
+Commodities Equities,CVX,Chevron Corp
+Commodities Equities,TTE,TotalEnergies SE
+Commodities Equities,WPM,Wheaton Precious Metals Corp
+Commodities Equities,VALE,Vale SA
+Commodities Equities,CLF,Cleveland-Cliffs Inc
+Commodities Equities,ALB,Albemarle Corp
+Commodities Equities,MOS,Mosaic Co/The
+Shipping ETFs,BDRY,Breakwave Dry Bulk Shipping ETF
+Shipping ETFs,BWET,Breakwave Tanker Shipping ETF
+Indices,^DJI,Dow Jones Industrial Average
+Indices,^SPX,S&P 500 Index
+Indices,^GSPTSE,S&P/TSX Composite Index
+Indices,^MXX,S&P/BMV IPC
+Indices,^BVSP,Ibovespa Brasil Sao Paulo Stock
+Indices,^STOXX50E,EURO STOXX 50 Price EUR
+Indices,UKXDUK.L,FTSE 100 Index
+Indices,^FCHI,CAC 40
+Indices,FTSEMIB.MI,FTSE MIB Index
+Indices,^OMX,OMX Stockholm 30 Index
+Indices,SMIN.SW,Swiss Market Index
+Indices,^N225,Nikkei 225
+Indices,^HSI,Hang Seng Index
+Indices,000300.SS,Shanghai Shenzhen CSI 300 Index
+Indices,^AXJO,S&P/ASX 200
+```
 
 Format in markdown starting with:
 ## Executive Summary - Allocation
@@ -467,16 +558,111 @@ Format in markdown starting with:
 INSIGHTS_CHANGES_PROMPT = '''Write concise, 50-word rationales for portfolio changes:
 - For any new positions added in the current allocation relative to the prior allocation, provide a 50-word reasoning grounded in the Orasis investment principles.
 - For any positions sold from the prior allocation, provide a 50-word reasoning grounded in the Orasis investment principles.
-- If there are no new positions added or removed you can also indicate that as well.
+- Although rare, but if there is completely no difference between both portolios, you can indicate that as well.
+- Please write simple in simple plain markdown text, don't include any JSON in your output. Your output will be rendered directly by our markdown renderer.
+
 
 ** formatting constraints ** : Use Positions Added and Positions Sold for necessary headers, do not use terms like "dropped", use "sold" instead.
+
+The prior allocation is:
+{old_portfolio_weights}
 
 The current allocation is:
 {current_portfolio_weights}
 
+Ticker names for referencing (FYI so you don't guess what the names are)
+```csv
+Category,Ticker,Name
+Shipping Equities,HAFNI.OL,Hafnia Ltd
+Shipping Equities,STNG,Scorpio Tankers Inc
+Shipping Equities,TRMD,TORM PLC
+Shipping Equities,FRO,Frontline PLC
+Shipping Equities,ECO,Okeanis Eco Tankers Corp
+Shipping Equities,DHT,DHT Holdings Inc
+Shipping Equities,INSW,International Seaways Inc
+Shipping Equities,NAT,Nordic American Tankers Ltd
+Shipping Equities,TEN,Tsakos Energy Navigation Ltd
+Shipping Equities,IMPP,Imperial Petroleum Inc
+Shipping Equities,PSHG,Performance Shipping Inc
+Shipping Equities,TORO,Toro Corp
+Shipping Equities,TNK,Teekay Tankers Ltd
+Shipping Equities,PXS,Pyxis Tankers Inc
+Shipping Equities,TOPS,TOP Ships Inc
+Shipping Equities,DSX,Diana Shipping Inc
+Shipping Equities,GNK,Genco Shipping & Trading Ltd
+Shipping Equities,GOGL,Golden Ocean Group Ltd
+Shipping Equities,NMM,Navios Maritime Partners LP
+Shipping Equities,SB,Safe Bulkers Inc
+Shipping Equities,SBLK,Star Bulk Carriers Corp
+Shipping Equities,SHIP,Seanergy Maritime Holdings Cor
+Shipping Equities,2020.OL,2020 Bulkers Ltd
+Shipping Equities,HSHP,Himalaya Shipping Ltd
+Shipping Equities,EDRY,EuroDry Ltd
+Shipping Equities,JINO.XD,Jinhui Shipping & Transportation
+Shipping Equities,CTRM,Castor Maritime Inc
+Shipping Equities,ICON,Icon Energy Corp
+Shipping Equities,GLBS,Globus Maritime Ltd
+Shipping Equities,CMRE,Costamare Inc
+Shipping Equities,DAC,Danaos Corp
+Shipping Equities,GSL,Global Ship Lease Inc
+Shipping Equities,ESEA,Euroseas Ltd
+Shipping Equities,MPCC.OL,MPC Container Ships ASA
+Shipping Equities,ZIM,ZIM Integrated Shipping Services
+Shipping Equities,SFL,SFL Corp Ltd
+Shipping Equities,BWLPGO.XD,BW LPG Ltd
+Shipping Equities,LPG,Dorian LPG Ltd
+Shipping Equities,CCEC,Capital Clean Energy Carriers
+Shipping Equities,GASS,StealthGas Inc
+Shipping Equities,DLNG,Dynagas LNG Partners LP
+Shipping Equities,AGASO.OL,Avance Gas Holding Ltd
+Shipping Equities,ALNGO.OL,Awilco LNG AS
+Shipping Equities,CLCO,Cool Co Ltd
+Shipping Equities,FLNG,FLEX LNG Ltd
+Energy Services,RIG,Transocean Ltd
+Energy Services,HLX,Helix Energy Solutions Group Inc
+Energy Services,PRS.OL,Prosafe SE
+Energy Services,SPM.MI,Saipem SpA
+Energy Services,SBMO.VI,SBM Offshore NV
+Energy Services,TDW,Tidewater Inc
+Commodities Equities,RIO,Rio Tinto PLC
+Commodities Equities,BHP,BHP Group Ltd
+Commodities Equities,VALE,Vale SA
+Commodities Equities,GLNCY,Glencore PLC
+Commodities Equities,ADM,Archer-Daniels-Midland Co
+Commodities Equities,WLMIY,Wilmar International Ltd
+Commodities Equities,BG,Bunge Global SA
+Commodities Equities,SHEL,Shell PLC
+Commodities Equities,XOM,Exxon Mobil Corp
+Commodities Equities,CVX,Chevron Corp
+Commodities Equities,TTE,TotalEnergies SE
+Commodities Equities,WPM,Wheaton Precious Metals Corp
+Commodities Equities,VALE,Vale SA
+Commodities Equities,CLF,Cleveland-Cliffs Inc
+Commodities Equities,ALB,Albemarle Corp
+Commodities Equities,MOS,Mosaic Co/The
+Shipping ETFs,BDRY,Breakwave Dry Bulk Shipping ETF
+Shipping ETFs,BWET,Breakwave Tanker Shipping ETF
+Indices,^DJI,Dow Jones Industrial Average
+Indices,^SPX,S&P 500 Index
+Indices,^GSPTSE,S&P/TSX Composite Index
+Indices,^MXX,S&P/BMV IPC
+Indices,^BVSP,Ibovespa Brasil Sao Paulo Stock
+Indices,^STOXX50E,EURO STOXX 50 Price EUR
+Indices,UKXDUK.L,FTSE 100 Index
+Indices,^FCHI,CAC 40
+Indices,FTSEMIB.MI,FTSE MIB Index
+Indices,^OMX,OMX Stockholm 30 Index
+Indices,SMIN.SW,Swiss Market Index
+Indices,^N225,Nikkei 225
+Indices,^HSI,Hang Seng Index
+Indices,000300.SS,Shanghai Shenzhen CSI 300 Index
+Indices,^AXJO,S&P/ASX 200
+```
+
 Format in markdown starting with:
 ## Executive Summary - Insights
 '''
+
 
 BENCHMARK_CALCULATIONS_PROMPT = '''Respond with only the JSON object containing the following benchmarking metrics for the given portfolio weights. Do not include any code fences, markdown formatting, or extra text.
 

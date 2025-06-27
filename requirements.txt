@@ -32,4 +32,5 @@ pdfplumber
 python-docx
 pandas
 langsmith
+langchain
 # fpdf2>=2.7.0                    # PDF generation

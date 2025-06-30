@@ -86,7 +86,7 @@ TRUSTED_DOMAINS = [
     "ft.com", 
     "tradewindsnews.com",
     "lloydslist.com", 
-    "hellenicshippingnews.com", 
+    # "hellenicshippingnews.com", 
     # "seatrade-maritime.com",
     "clarksons.com", 
     "iea.org", 
@@ -141,6 +141,7 @@ INSTRUMENT_LIST_TEXT = load_file("list_of_instruments.txt")
 PLAN_PROMPT = """
 You are an expert research planner.
 Your goal is to devise a strategy to find {n_news} unique, late-breaking news stories for the "{category}" sector. Today's date is {current_date}.
+The articles should be maximum of 3 days old, we want latest news.
 These stories MUST come from the provided trusted news domains.
 Each news story must be from a different article (unique URL).
 The news should ideally provide context for investment decisions. While specific instruments are listed below for awareness, focus on generating broad queries for the category first.
@@ -260,7 +261,7 @@ Follow these instructions:
     *   Have a clear headline, a 50-word digest, and a unique, full source URL for each item.
     *   Be well-formatted as specified.
     *   Be factual and based on the provided RESEARCH CONTENT.
-    *   Reflect recency appropriate for today's date.
+    *   Reflect recency appropriate for today's date we don't want articles older than 3 days.
 4.  **Maintain Quality**: Improve clarity, conciseness, and remove any vague or unsupported statements.
 
 If the CRITIQUE states "NEEDS_MORE_RESEARCH" due to insufficient *relevant* source articles, you may not be able to produce {n_news} items. In this case, revise the existing items as best as possible based on other critique points and hallucinations. Please do not add any additional notes, maintain the structure of the original draft. Your output will be directly processed. Do not say 'Here is your news ......' Just follow the structure of the original draft
@@ -823,7 +824,18 @@ import asyncio
 async def run_full_news_agent():
     all_human_digests = {}
     all_llm_corpora = {}
-    global_seen_urls = set()
+    global_seen_urls = set([
+  "https://www.lloydslist.com/data-tools",
+  "https://www.spglobal.com/",
+  "https://www.iea.org/",
+  "https://www.clarksons.com/",
+  "https://www.seatrade-maritime.com/",
+  "https://www.hellenicshippingnews.com/",
+  "https://www.lloydslist.com/",
+  "https://www.tradewindsnews.com/",
+  "https://www.reuters.com/",
+  "https://www.bloomberg.com/"
+])
 
     if os.path.exists(DIGESTS_FILE):
         try:

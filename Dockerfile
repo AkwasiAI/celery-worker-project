@@ -35,7 +35,7 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
 RUN mkdir -p /app/logs
 
 # Copy project files as root
-COPY requirements.txt start_worker.sh celery_config.py tasks.py list_of_instruments.txt orasis_investment_principles.txt /app/
+COPY requirements.txt start_worker.sh celery_config.py tasks.py list_of_instruments.txt orasis_investment_principles.txt processed_seen_urls.json /app/
 
 # Create module structure
 RUN mkdir -p /app/portfolio_generator

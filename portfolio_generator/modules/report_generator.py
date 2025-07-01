@@ -40,31 +40,52 @@ import re
 
 def extract_markdown(text):
     """
-    Extracts markdown from LLM output.
-    - If a markdown code block is present, returns its content.
-    - If text looks like markdown, returns the text.
-    - Otherwise, returns the text as-is.
-    Always returns a string.
+    Extracts the *main* markdown/report content.
+    - If code blocks exist and are longer than 60% of the total, return the largest.
+    - If text overall looks like markdown/report, return the full text.
+    - Otherwise, just return the whole input (never just a little json or stray block).
     """
-    # Try to extract markdown inside triple backticks
-    pattern = r"```(?:markdown|md)?\s*([\s\S]*?)```"
-    match = re.search(pattern, text, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    # Heuristics: Check if the text looks like markdown
+    # 1. Find all code blocks (markdown, json, etc)
+    blocks = [m.group(1) for m in re.finditer(r"```(?:markdown|md|json)?\s*([\s\S]*?)```", text, re.IGNORECASE)]
+    # 2. If there are code blocks, see if any is very large (over 60% of text)
+    if blocks:
+        biggest = max(blocks, key=len)
+        if len(biggest) > 0.6 * len(text):
+            return biggest.strip()
+    # 3. Heuristics: does the full text look like a report/markdown?
     markdown_signals = [
-        r"^\s*#",          # Heading
-        r"^\s*[-*+]\s",    # Lists
-        r"\*\*.+\*\*",     # Bold
-        r"\*.+\*",         # Italic
-        r"`.+`",           # Inline code
-        r"\[.+\]\(.+\)",   # Links
-        r"\|\s?.+\|",      # Table
+        r"^\s*#",
+        r"^\s*##",
+        r"\|\s?.+\|",    # Table
+        r"\*\*.+\*\*",   # Bold
+        r"\n- citation: ",
+        r"\n### ",
+        r"\n## ",
+        r"\n# ",
     ]
     if any(re.search(signal, text, re.MULTILINE) for signal in markdown_signals):
         return text.strip()
-    # Fallback: just return the original text
+    # 4. Fallback: just return all text
     return text.strip()
+
+import copy 
+
+def clean_portfolio(data):
+    # Make a deep copy to avoid modifying the original data
+    data_clean = copy.deepcopy(data)
+    # Filter and clean the assets
+    assets = data_clean["portfolio"]["assets"]
+    new_assets = []
+    for asset in assets:
+        if not asset.get("wasRemoved", False):
+            asset_copy = asset.copy()
+            asset_copy.pop("wasRemoved", None)
+            asset_copy.pop("isNew", None)
+            new_assets.append(asset_copy)
+    # Update the assets list in the original structure
+    data_clean["portfolio"]["assets"] = new_assets
+    data_clean["portfolio"].pop("portfolio_stats")
+    return data_clean["portfolio"]
 
 
 # New helper for Gemini sanitization, using the google-genai SDK
@@ -492,6 +513,12 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
 
         firebase_downloader = FirestoreDownloader()
         previous_portfolio = firebase_downloader.get_latest("portfolio_weights")
+        try:
+            previous_portfolio = clean_portfolio(previous_portfolio)
+            log_success("Old portfolio was cleaned successfully")
+                
+        except Exception as e:
+            log_error(f"Could not clean the old portfolio:  {str(e)}")
 
         # structured_response = await generate_portfolio_executive_summary(
         #                     llm_corpus_content=formatted_search_results, # Replace with your actual data
@@ -522,7 +549,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                     # If timestamp is datetime, use as is
                     if isinstance(ts, datetime):
                         now = datetime.now(timezone.utc)
-                        if now - ts < timedelta(hours=24):
+                        if now - ts < timedelta(hours=10000): # Use feedback if is latest and not up to 10 thousand hours. LOL
                             george_feedback = data.get("scratchpad")
 
             log_success("successfully pulled George's Feedback!!")
@@ -1123,7 +1150,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
                 # If timestamp is datetime, use as is
                 if isinstance(ts, datetime):
                     now = datetime.now(timezone.utc)
-                    if now - ts < timedelta(hours=24):
+                    if now - ts < timedelta(hours=10000): # Use feedback if is latest and not up to 10 thousand hours. LOL
                         george_feedback = data.get("scratchpad")
 
                         from portfolio_generator.modules.feedback_summarizer import FeedbackSummarizer
@@ -1387,7 +1414,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
             )
             
             if pdf_result.get('gcs_path'):
-                log_error(f"PDF generation failed: {e}")
+                log_success(f"PDF uploaded to: {pdf_result['gcs_path']}")
             
             if pdf_result.get('local_path'):
                 log_info(f"PDF saved locally: {pdf_result['local_path']}")
@@ -1395,9 +1422,35 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     except Exception as e:
         log_error(f"PDF generation failed: {e}")
 
+    import requests
+
+    url = "https://hedge-fund-intelligence-1023342427319.us-central1.run.app/api/portfolio-scratchpad/simulate100million"
 
     try:
-        mindmap = text_to_mindmap(report_content)
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()  # Raises HTTPError for bad responses
+
+        data = response.json()
+        print("Status:", data.get("status"))
+        print("Message:", data.get("message"))
+        print("Simulation Result:", data.get("simulation_result"))
+        log_success(f"Portfolio Purchased successfully!")
+
+    except requests.exceptions.HTTPError as errh:
+        print(f"HTTP Error: {errh}")
+    except requests.exceptions.ConnectionError as errc:
+        print(f"Connection Error: {errc}")
+    except requests.exceptions.Timeout as errt:
+        print(f"Timeout Error: {errt}")
+    except requests.exceptions.RequestException as err:
+        print(f"Request Exception: {err}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+
+    try:
+        mindmap = text_to_mindmap(report_content + portfolio_text)
         if mindmap:
             log_success(f"Mindmap generated successfully!")
             try:
@@ -1448,6 +1501,33 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         log_success(f"Successfully cleared old files: digests and scratchpad")
     except Exception as e_rb:
         log_warning(f"Failed to Clear existing digests and scratchpad")
+
+
+    import requests
+
+    url = "https://hedge-fund-intelligence-1023342427319.us-central1.run.app/api/portfolio-scratchpad/simulate100millionalt"
+
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()  # Raises HTTPError for bad responses
+
+        data = response.json()
+        print("Status:", data.get("status"))
+        print("Message:", data.get("message"))
+        print("Simulation Result:", data.get("simulation_result"))
+        log_success(f"Alternative Portfolio Purchased successfully!")
+
+    except requests.exceptions.HTTPError as errh:
+        print(f"HTTP Error: {errh}")
+    except requests.exceptions.ConnectionError as errc:
+        print(f"Connection Error: {errc}")
+    except requests.exceptions.Timeout as errt:
+        print(f"Timeout Error: {errt}")
+    except requests.exceptions.RequestException as err:
+        print(f"Request Exception: {err}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
     
     # Return the report content
     return {

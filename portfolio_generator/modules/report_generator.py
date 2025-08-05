@@ -35,6 +35,7 @@ from portfolio_generator.modules.reward_eval_runner import evaluate_yesterday, p
 from portfolio_generator.modules.alternative_portfolio_generator import generate_and_upload_alternative_report
 from portfolio_generator.modules.historical_returns import fetch_all_ticker_returns_combined
 from portfolio_generator.modules.mindmap import text_to_mindmap
+from portfolio_generator.modules.earningcallsfetcher import ingest_new_earnings_transcripts
 
 import re
 
@@ -824,6 +825,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     # 11. Generate Allocation section
     # Load previous allocation weights from Firestore
     prev_allocation_weights = FirestoreDownloader().get_latest("portfolio_weights")
+    prev_allocation_weights = clean_portfolio(prev_allocation_weights)
     allocation_prompt = ALLOCATION_CHANGES_PROMPT.format(
         old_portfolio_weights=prev_allocation_weights,
         current_portfolio_weights=portfolio_json
@@ -1427,7 +1429,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     url = "https://hedge-fund-intelligence-1023342427319.us-central1.run.app/api/portfolio-scratchpad/simulate100million"
 
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=100)
         response.raise_for_status()  # Raises HTTPError for bad responses
 
         data = response.json()
@@ -1508,7 +1510,7 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
     url = "https://hedge-fund-intelligence-1023342427319.us-central1.run.app/api/portfolio-scratchpad/simulate100millionalt"
 
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=100)
         response.raise_for_status()  # Raises HTTPError for bad responses
 
         data = response.json()
@@ -1527,6 +1529,16 @@ async def generate_investment_portfolio(test_mode=False, dry_run=False, priority
         print(f"Request Exception: {err}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
+    ####################################### update Earning Calls database ##########################################
+    
+    try:
+        result = ingest_new_earnings_transcripts()
+        log_success(f"Earning calls updated successfully!")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        log_error(f"Earning calls update failed")
 
     
     # Return the report content

@@ -2,15 +2,17 @@ import datetime
 import json
 import os
 import requests # New import for making HTTP requests to FMP API
-import google.generativeai as genai # NEW IMPORT
+
+# LangChain imports
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
+from langchain_core.output_parsers import JsonOutputParser
+
 # Ensure Firestore is imported if not already present
 try:
     from google.cloud import firestore
 except ImportError:
     firestore = None # Handle case where google-cloud-firestore is not installed
-
-# Import FMP_API_KEY from config
-# from app.config import FMP_API_KEY # Assuming you added FMP_API_KEY to app/config.py
 
 # Custom JSON encoder (already exists in your provided script, ensure it's accessible)
 class FirestoreEncoder(json.JSONEncoder):
@@ -26,7 +28,6 @@ class FirestoreEncoder(json.JSONEncoder):
         return super().default(obj)
 
 # --- FMP API Configuration ---
-# --- FMP API Configuration ---
 FMP_BASE_URL = "https://financialmodelingprep.com/api/v3" # Still use /api/v3 for general FMP base, but specific endpoints below
 FMP_STABLE_BASE_URL = "https://financialmodelingprep.com/stable" # Use this for stable API endpoints
 
@@ -34,11 +35,8 @@ FMP_API_KEY = os.environ.get("FMP_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # --- List of Tickers of Interest ---
-# This list is derived from the CSV data you provided.
-# You might want to move this to a separate file or a database for easier management
-# if it grows very large or needs dynamic updates.
 INTERESTED_TICKERS = [
-    "HAFNI.OL", 
+    "HAFNI.OL",
      "STNG", "TRMD", "FRO", "ECO", "DHT", "INSW", "NAT", "TEN", "IMPP",
     "PSHG", "TORO", "TNK", "PXS", "TOPS", "DSX", "GNK", "GOGL", "NMM", "SB",
     "SBLK", "SHIP", "2020.OL", "HSHP", "EDRY", "JINO.XD", "CTRM", "ICON", "GLBS", "CMRE",
@@ -94,13 +92,7 @@ ticker_name = {
     "000300.SS": "Shanghai Shenzhen CSI 300 Index", "^AXJO": "S&P/ASX 200"
 }
 
-
-
 FMP_V4_BASE_URL = "https://financialmodelingprep.com/api/v4"
-
-# (Existing imports and helper functions, including parse_fmp_date_string)
-
-# Make sure the constants like FMP_BASE_URL, FMP_V4_BASE_URL, INTERESTED_TICKERS are defined above this route.
 
 def parse_fmp_date_string(date_string):
     """
@@ -279,10 +271,9 @@ def fetch_fmp_earnings_transcripts(ticker, start_date_filter=None):
             
     return transcripts_data
 
-# --- New Gemini Analysis Function ---
 def analyze_transcript_with_gemini(transcript_text, ticker, conference_date):
     """
-    Analyzes an earnings call transcript using Google Gemini to extract alpha, sentiment, and summary.
+    Analyzes an earnings call transcript using LangChain with Google Gemini to extract alpha, sentiment, and summary.
     
     Args:
         transcript_text (str): The full text of the earnings call transcript.
@@ -297,14 +288,15 @@ def analyze_transcript_with_gemini(transcript_text, ticker, conference_date):
         print("Gemini API Key is not configured. Skipping AI analysis.")
         return None
 
-    # Handle potentially very long transcripts for Gemini (Gemini Pro has a large context window, but still limits)
-    # A simple truncation might be needed for extremely long transcripts if they exceed Gemini's token limits.
-    # For now, we'll send the full transcript and let the API handle length warnings/errors.
-    
-    model = genai.GenerativeModel('gemini-2.5-flash') # Using gemini-pro for text generation
+    # Initialize the LangChain model for Google Gemini
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",
+                               google_api_key=GEMINI_API_KEY,
+                               model_kwargs={"response_format": {"type": "json_object"}})
+
+    # Define the output parser
+    parser = JsonOutputParser()
 
     # Craft the prompt for Gemini
-    # It's crucial to be very specific about the output JSON format and negative constraints.
     prompt_text = f"""
     Analyze the following earnings call transcript for {ticker} (Conference Date: {conference_date.strftime('%Y-%m-%d %H:%M:%S')}).
     
@@ -327,46 +319,29 @@ def analyze_transcript_with_gemini(transcript_text, ticker, conference_date):
     ---
     """
 
+    # Create the message and the chain
+    message = HumanMessage(content=prompt_text)
+    chain = llm | parser
+
     try:
-        response = model.generate_content(prompt_text, generation_config={"response_mime_type": "application/json"})
+        # Invoke the chain to get the structured output
+        result = chain.invoke([message])
         
-        # Gemini with "response_mime_type": "application/json" should return valid JSON directly in text attribute
-        content = response.text
-        
-        # Parse the JSON response
-        try:
-            result = json.loads(content)
-            
-            # Basic validation of expected fields
-            if not all(k in result for k in ["ExtractedAlpha", "confidence_score", "sentiment", "summary"]):
-                print(f"Gemini response for {ticker} missing expected fields: {result}. Attempting best effort extraction.")
-                # Fallback to manual extraction if JSON is malformed or missing keys
-                extracted_alpha = result.get("ExtractedAlpha")
-                confidence_score = result.get("confidence_score")
-                sentiment = result.get("sentiment")
-                summary = result.get("summary")
-            else:
-                extracted_alpha = result["ExtractedAlpha"]
-                confidence_score = float(result["confidence_score"])
-                sentiment = result["sentiment"]
-                summary = result["summary"]
-            
-            # Return extracted data
+        # Basic validation of expected fields
+        if not all(k in result for k in ["ExtractedAlpha", "confidence_score", "sentiment", "summary"]):
+            print(f"LangChain Gemini response for {ticker} missing expected fields: {result}.")
+            return None
+        else:
             return {
-                "ExtractedAlpha": extracted_alpha,
-                "confidence_score": confidence_score,
-                "sentiment": sentiment,
-                "summary": summary
+                "ExtractedAlpha": result["ExtractedAlpha"],
+                "confidence_score": float(result["confidence_score"]),
+                "sentiment": result["sentiment"],
+                "summary": result["summary"]
             }
 
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"Failed to parse JSON from Gemini response for {ticker}: {e}. Response text: {content[:500]}...")
-            return None
-        
     except Exception as e:
-        print(f"Error calling Gemini API for {ticker}: {e}", exc_info=True)
+        print(f"Error calling LangChain with Gemini API for {ticker}: {e}", exc_info=True)
         return None
-
 
 
 def transform_fmp_to_firestore_doc(fmp_data):
@@ -401,12 +376,6 @@ def transform_fmp_to_firestore_doc(fmp_data):
     }
     return firestore_doc
 
-# (Keep all your existing imports and helper functions like FirestoreEncoder,
-#  fetch_fmp_earnings_transcripts, and transform_fmp_to_firestore_doc from the previous response.)
-
-# Make sure the constants like FMP_BASE_URL, FMP_STABLE_BASE_URL, and INTERESTED_TICKERS are defined above this route.
-
-# @app.route("/api/earnings-calls/ingest-new-transcripts", methods=["POST"])
 def ingest_new_earnings_transcripts():
     """
     POST endpoint to trigger the ingestion of new earnings call transcripts from FMP
